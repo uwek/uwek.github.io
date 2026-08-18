@@ -12,6 +12,8 @@ fertige HTML-Dateien ausgeliefert werden, lassen sich statische Seiten laut
 {% cite schmidt2023 %} im Schnitt drei- bis fünfmal schneller ausliefern als
 klassische, serverseitig gerenderte CMS-Systeme.[^1]
 
+<!--more-->
+
 Für den Einstieg lohnt sich ein Blick auf die grundlegenden Konzepte von Jekyll –
 Layouts, Includes und die Trennung von Inhalt und Darstellung werden unter anderem
 ausführlich in {% cite keller2021 %} beschrieben, einem Standardwerk für Jekyll-Neulinge.[^2]

@@ -9,6 +9,14 @@
   border-top: 1px solid $grey-color-light;
 }
 
+// Jekyll's excerpt extraction pulls in footnote definitions referenced
+// within the excerpt (it treats "[^1]: ..." like a markdown link
+// reference), so a footnote used before <!--more--> gets fully
+// resolved again in the post-list preview. Hide it there.
+.post-list .footnotes {
+  display: none;
+}
+
 .bibliography {
   list-style: none;
   margin-left: 0;
