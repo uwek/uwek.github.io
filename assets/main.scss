@@ -1,0 +1,20 @@
+---
+---
+
+@import "minima";
+
+.footnotes {
+  margin-top: 2em;
+  padding-top: 1em;
+  border-top: 1px solid $grey-color-light;
+}
+
+.bibliography {
+  list-style: none;
+  margin-left: 0;
+
+  li {
+    padding-left: 2em;
+    text-indent: -2em;
+  }
+}

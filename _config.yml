@@ -35,12 +35,20 @@ plugins:
   - jekyll-feed
   - jekyll-scholar
 
+# Silence Sass deprecation warnings coming from the minima theme's own
+# stylesheets (deprecated lighten()/darken()), not from our own scss.
+sass:
+  quiet_deps: true
+
 # jekyll-scholar settings (BibTeX-based citations & bibliography)
 # Reads _bibliography/references.bib by default; use {% bibliography %}
 # to render the full list and {% cite key %} for inline citations.
 scholar:
-  style: apa
-  locale: en
+  style: din-1505-2
+  locale: de
+
+  sort_by: author
+  order: ascending
 
   source: ./_bibliography
   bibliography: references.bib
