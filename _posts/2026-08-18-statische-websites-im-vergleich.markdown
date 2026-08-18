@@ -18,7 +18,7 @@ Für den Einstieg lohnt sich ein Blick auf die grundlegenden Konzepte von Jekyll
 Layouts, Includes und die Trennung von Inhalt und Darstellung werden unter anderem
 ausführlich in {% cite keller2021 %} beschrieben, einem Standardwerk für Jekyll-Neulinge.[^2]
 
-Ein weiterer Aspekt ist die Auslieferung selbst: {% cite wagner2022 --locator 120f %} zeigen, dass
+Ein weiterer Aspekt ist die Auslieferung selbst: {% cite wagner2022 --locator 120f %} und {% cite wagner2022 --locator 140f %} zeigen, dass
 sich die Ladezeit generierter Websites durch konsequentes Caching und minimierte
 Assets noch einmal deutlich senken lässt, unabhängig vom verwendeten Generator.
 
