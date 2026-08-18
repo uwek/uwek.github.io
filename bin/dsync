@@ -1,0 +1,9 @@
+#!/bin/bash
+
+cd $HOME/uwek.github.io
+git config --global user.email "uwe.kallmeyer@gmail.com"
+git config --global user.name "Uwe Kallmeyer"
+git config --bool branch.main.sync true
+git add --all
+git commit -m "changed"
+./bin/git-sync
