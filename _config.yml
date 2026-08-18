@@ -18,7 +18,7 @@
 # You can create any custom variable you would like, and they will be accessible
 # in the templates via {{ site.myvariable }}.
 
-title: Your awesome title
+title: my awesome title
 email: your-email@example.com
 description: >- # this means to ignore newlines until "baseurl:"
   Write an awesome description for your new site here. You can edit this
@@ -33,6 +33,28 @@ github_username:  jekyll
 theme: minima
 plugins:
   - jekyll-feed
+  - jekyll-scholar
+
+# jekyll-scholar settings (BibTeX-based citations & bibliography)
+# Reads _bibliography/references.bib by default; use {% bibliography %}
+# to render the full list and {% cite key %} for inline citations.
+scholar:
+  style: apa
+  locale: en
+
+  source: ./_bibliography
+  bibliography: references.bib
+
+  bibliography_template: "{{reference}}"
+
+  replace_strings: true
+  join_strings: true
+
+  details_dir: bibliography
+  details_layout: bibtex.html
+  details_link: Details
+
+  query: "@*"
 
 # Exclude from processing.
 # The following items will not be processed, by default.
