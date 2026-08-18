@@ -22,6 +22,23 @@ Ein weiterer Aspekt ist die Auslieferung selbst: {% cite wagner2022 --locator 12
 sich die Ladezeit generierter Websites durch konsequentes Caching und minimierte
 Assets noch einmal deutlich senken lässt, unabhängig vom verwendeten Generator.
 
+Auch das Werkzeug drumherum lässt sich anpassen: wer Beiträge in Emacs schreibt,
+kann sich eine kleine Funktion definieren, die ein neues Post-Grundgerüst anlegt:
+
+```elisp
+(defun jekyll-new-post (title)
+  "Create a new Jekyll post skeleton in _posts/."
+  (interactive "sTitle: ")
+  (let* ((slug (replace-regexp-in-string "[^a-z0-9]+" "-" (downcase title)))
+         (filename (format "_posts/%s-%s.markdown"
+                           (format-time-string "%Y-%m-%d")
+                           slug)))
+    (find-file filename)
+    (insert (format "---\nlayout: post\ntitle: \"%s\"\ndate: %s\n---\n\n"
+                    title
+                    (format-time-string "%Y-%m-%d %H:%M:%S %z")))))
+```
+
 Genug Theorie – als Nächstes geht es hier im Blog um die konkrete Umsetzung.
 
 [^1]: Gemessen wurde die Time-to-First-Byte bei identischer Serverhardware, ohne CDN-Beschleunigung – mit CDN relativiert sich der Unterschied deutlich.
