@@ -15,9 +15,31 @@
 ;;   would need its own CSL setup independent of jekyll-scholar's);
 ;; - drops #+print_bibliography: output, since the post layout already
 ;;   renders the bibliography via {% bibliography --cited %}.
+;;
+;; Babel evaluation: Org's export machinery walks the whole buffer and
+;; may want to (re-)run any #+RESULTS:/#+CALL: it finds, gated by
+;; `org-confirm-babel-evaluate' -- which defaults to an interactive
+;; y-or-n-p that just aborts under --batch. We don't want to lift that
+;; gate wholesale (a literate-programming post can contain many
+;; unrelated code blocks that would then execute for real under a bare
+;; -Q Emacs with no packages loaded). But noweb function-call
+;; references, e.g. "<<name()>>", are a deliberate per-reference
+;; request by the author to inline a block's *evaluated* result, so we
+;; scope permission narrowly: only calls going through
+;; `org-babel-expand-noweb-references' (the noweb-reference resolver)
+;; get to auto-evaluate, and only for emacs-lisp. Every other
+;; evaluation path (plain #+RESULTS:/#+CALL: refresh) keeps the
+;; default, safe "ask and abort" behavior.
 
 (require 'ox-md)
 (require 'oc)
+(require 'ob-core)
+
+(advice-add 'org-babel-expand-noweb-references :around
+  (lambda (orig-fn &rest args)
+    (let ((org-confirm-babel-evaluate
+           (lambda (lang _body) (not (member lang '("emacs-lisp" "elisp"))))))
+      (apply orig-fn args))))
 
 (defun jekyll-org--src-block (src-block _contents info)
   (let ((lang (org-element-property :language src-block))

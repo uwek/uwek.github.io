@@ -28,7 +28,7 @@ Hier kommt ein Zitat:{% cite keller2021 --locator 120ff %}
 ```
 
 ```emacs-lisp
-(setq my/initfile "nil")
+(setq my/initfile "/home/uwek/uwek.github.io/_org/2026-08-18-emacs-init.org")
 (defun my/localfile (fname)
   (expand-file-name (concat (file-name-directory my/initfile) fname)))
 ```
