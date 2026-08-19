@@ -86,6 +86,7 @@ scholar:
 exclude:
     - bin/
     - _org/
+    - _denote/
     - Makefile
 
 #   - .sass-cache/

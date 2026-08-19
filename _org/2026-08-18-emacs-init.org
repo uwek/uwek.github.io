@@ -34,7 +34,6 @@ Hilfreiche Standard-Shortcuts
     (expand-file-name (concat (file-name-directory my/initfile) fname)))
 #+end_src    
 
-* Config
 * sane defaults
 #+begin_src emacs-lisp
     ;; (if (fboundp 'scroll-bar-mode) (scroll-bar-mode -1))
@@ -63,8 +62,7 @@ Hilfreiche Standard-Shortcuts
     (set-terminal-coding-system 'utf-8-unix)
     (set-keyboard-coding-system 'utf-8-unix)
 
-;; (xterm-mouse-mode 1)
-;; (xterm-mouse-mode 0)
+    (xterm-mouse-mode 1)
 
     (load-theme 'modus-vivendi)
 #+end_src
@@ -73,11 +71,8 @@ Hilfreiche Standard-Shortcuts
 #+BEGIN_SRC emacs-lisp
   (require 'package)
   (setq package-enable-at-startup nil)
-  (setq package-archives '(("org"   . "http://orgmode.org/elpa/")
-                           ("gnu"   . "http://elpa.gnu.org/packages/")
-                           ("melpa" . "https://melpa.org/packages/")))
+  (setq package-archives '(("melpa" . "https://melpa.org/packages/")))
   (package-initialize)
-  ;; Bootstrap `use-package`
   (setq package-check-signature nil)
   (unless (package-installed-p 'use-package)
     (package-refresh-contents)
@@ -104,9 +99,6 @@ Hilfreiche Standard-Shortcuts
         :global-prefix "M-SPC" ;; access leader in insert mode
         ))
 #+end_src
-
-#+RESULTS:
-: #s(hash-table data (:use-package (27269 18010 143569 572000) :init (27269 18010 143565 912000) :config (27269 18010 143385 556000) :config-secs (0 0 237765 780000) :init-secs (0 0 241676 382000) :use-package-secs (0 0 243955 873000)))
 
 * package: eyebrowse
 #+BEGIN_SRC emacs-lisp
@@ -296,8 +288,41 @@ https://protesilaos.com/emacs/denote
       (org-narrow-to-subtree)))
 
 #+end_src
-;;  (general-define-key
-;;   (my/nav-key "<") '(my/org-narrow-toggle :wk "toggle subtree"))
+
+* my/jekyll-new-post
+#+begin_src emacs-lisp
+  (defun my/jekyll-slugify (title)
+    "TITLE in einen URL-tauglichen Slug umwandeln (Umlaute transliteriert)."
+    (let ((s (downcase title)))
+      (setq s (replace-regexp-in-string "ä" "ae" s))
+      (setq s (replace-regexp-in-string "ö" "oe" s))
+      (setq s (replace-regexp-in-string "ü" "ue" s))
+      (setq s (replace-regexp-in-string "ß" "ss" s))
+      (setq s (replace-regexp-in-string "[^a-z0-9]+" "-" s))
+      (replace-regexp-in-string "\\`-+\\|-+\\'" "" s)))
+
+  (defun my/jekyll-new-post (title)
+    "Neuen Jekyll-Blogpost als Org-Quelle in _org/ anlegen und öffnen.
+  Dateiname folgt dem Schema _org/YYYY-MM-DD-slug.org, das make org
+  nach _posts/YYYY-MM-DD-slug.markdown exportiert."
+    (interactive "sTitel: ")
+    (let* ((date (format-time-string "%Y-%m-%d"))
+           (slug (my/jekyll-slugify title))
+           (file (my/localfile (format "../_org/%s-%s.org" date slug))))
+      (when (file-exists-p file)
+        (user-error "Datei existiert bereits: %s" file))
+      (find-file file)
+      (insert (format "#+TITLE: %s\n" title))
+      (insert (format "#+DATE: %s\n" (format-time-string "%Y-%m-%d %H:%M:%S %z")))
+      (insert "#+CATEGORIES: jekyll\n\n")
+      (insert "Kurze Einleitung.\n\n")
+      (insert "#+BEGIN_EXPORT html\n<!--more-->\n#+END_EXPORT\n\n")
+      (insert "* Abschnitt\n\n")
+      (insert "Text.\n")
+      (goto-char (point-min))
+      (forward-line 6)
+      (end-of-line)))
+#+end_src
 
 * evil-mode
 #+begin_src emacs-lisp
@@ -351,22 +376,23 @@ https://protesilaos.com/emacs/denote
 
 * general keybindings
 #+BEGIN_SRC emacs-lisp
-    (defun uka/dsync ()
-      (interactive)
-      (shell-command (concat "cd " (my/localfile "..") " && ./bin/dsync")))
+  (defun uka/dsync ()
+    (interactive)
+    (shell-command (concat "cd " (my/localfile "..") " && make org"))
+    (shell-command (concat "cd " (my/localfile "..") " && ./bin/dsync"))
+    )
 
-    (defun my-escesc () ;; wenn META nicht klappt:
-      (interactive)
-      (evil-esc-mode 1) 
-      (setq evil-esc-delay 0.2))
+  (defun my-escesc () ;; wenn META nicht klappt:
+    (interactive)
+    (evil-esc-mode 1) 
+    (setq evil-esc-delay 0.2))
 
     (my/leader-keys
-      ;;"SPC" '(counsel-M-x :wk "Counsel M-x")
       "SPC" '(execute-extended-command :wk "M-x")
       "TAB" '(comment-line :wk "Comment lines")
       "#" '(my-indirect-buffer :wk "note-bar")
       "." '(find-file :wk "Find file")
-      "," '(flyspell-correct-word-before-point :wk "Correct!")
+      ;;"," '(flyspell-correct-word-before-point :wk "Correct!") ;; flyspell-correct entfernt, s.u.
       ;;"a" '((lambda()(interactive)(org-agenda nil "n")) :wk "org-agenda")
       "c" '(count-words :wk "Count words")
       "u" '(universal-argument :wk "Universal argument")
@@ -380,8 +406,6 @@ https://protesilaos.com/emacs/denote
       "<right>" '(windmove-right :wk "Windmove Right")
       "<up>" '(windmove-up :wk "Windmove Up")
       "<down>" '(windmove-down :wk "Windmove Down")
- 
-      ;; "<" '((lambda()(interactive)(uka/check (uka/d6) (uka/d6))) :wk "roll fair")
       )
 
     (my/leader-keys
@@ -412,12 +436,8 @@ https://protesilaos.com/emacs/denote
       "f c" '((lambda () (interactive)
                 (find-file my/initfile))
               :wk "Open emacsinit.org")
-      ;; "f d" '(find-grep-dired :wk "Search for string in files in DIR")
-      ;; "f g" '(counsel-grep-or-swiper :wk "Search for string current file")
-      ;; "f j" '(counsel-file-jump :wk "Jump to a file below current directory")
-      ;; "f l" '(counsel-locate :wk "Locate a file")
       "f r" '(recentf-open-files :wk "Find recent files")
-      ;;"f r" '(counsel-recentf :wk "Find recent files")
+      "f n" '(my/jekyll-new-post :wk "Neuer Blogpost")
       )
 
     (my/leader-keys
@@ -427,13 +447,13 @@ https://protesilaos.com/emacs/denote
       "j s" '(org-store-link :wk "Store link")
       "j t" '(org-inlinetask-insert-task :wk "Inline task")
       "j l" '(org-todo-list :wk "Todo list")
-      "j j" '(org-journal-new-entry :wk "Neuer Eintrag")
-      "j h" '((lambda () (interactive) (org-journal-new-entry 1)) :wk "Heute")
+      ;;"j j" '(org-journal-new-entry :wk "Neuer Eintrag") ;; org-journal nicht installiert
+      ;;"j h" '((lambda () (interactive) (org-journal-new-entry 1)) :wk "Heute")
       )
 
     (my/leader-keys
       "l" '(:ignore t :wk "LLM")
-      "l l" '(gptel-send :wk "send to OpenAI"))
+      "l l" '(gptel-send :wk "send to OpenRouter"))
 
     (my/leader-keys
       "o" '(:ignore t :wk "org-mode")

@@ -28,42 +28,38 @@ Hilfreiche Standard-Shortcuts
 ```
 
 
-# Config
-
-
 # sane defaults
 
 ```emacs-lisp
-    ;; (if (fboundp 'scroll-bar-mode) (scroll-bar-mode -1))
-    (if (fboundp 'tool-bar-mode) (tool-bar-mode -1))
-    (if (fboundp 'menu-bar-mode) (menu-bar-mode -1))
+;; (if (fboundp 'scroll-bar-mode) (scroll-bar-mode -1))
+(if (fboundp 'tool-bar-mode) (tool-bar-mode -1))
+(if (fboundp 'menu-bar-mode) (menu-bar-mode -1))
 
-    ;;(setq warning-minimum-level :error)
-    (setq custom-file (make-temp-file "emacs-custom"))
-    (setq visible-bell 1)
-    (setq inhibit-startup-screen t)
-    (defalias 'yes-or-no-p 'y-or-n-p)
-    (setq make-backup-files nil)
-    (show-paren-mode)
-    (electric-indent-mode -1)
+;;(setq warning-minimum-level :error)
+(setq custom-file (make-temp-file "emacs-custom"))
+(setq visible-bell 1)
+(setq inhibit-startup-screen t)
+(defalias 'yes-or-no-p 'y-or-n-p)
+(setq make-backup-files nil)
+(show-paren-mode)
+(electric-indent-mode -1)
 
-    (recentf-mode 1)
-    (setq history-length 25)
-    (savehist-mode 1)
-    (save-place-mode 1)
-    (global-auto-revert-mode 1)
-    (setq global-auto-revert-non-file-buffers t)
+(recentf-mode 1)
+(setq history-length 25)
+(savehist-mode 1)
+(save-place-mode 1)
+(global-auto-revert-mode 1)
+(setq global-auto-revert-non-file-buffers t)
 
-    (setq system-time-locale "de_DE.UTF-8")
-    (prefer-coding-system 'utf-8-unix)
-    (set-default-coding-systems 'utf-8-unix)
-    (set-terminal-coding-system 'utf-8-unix)
-    (set-keyboard-coding-system 'utf-8-unix)
+(setq system-time-locale "de_DE.UTF-8")
+(prefer-coding-system 'utf-8-unix)
+(set-default-coding-systems 'utf-8-unix)
+(set-terminal-coding-system 'utf-8-unix)
+(set-keyboard-coding-system 'utf-8-unix)
 
-;; (xterm-mouse-mode 1)
-;; (xterm-mouse-mode 0)
+(xterm-mouse-mode 1)
 
-    (load-theme 'modus-vivendi)
+(load-theme 'modus-vivendi)
 ```
 
 
@@ -72,11 +68,8 @@ Hilfreiche Standard-Shortcuts
 ```emacs-lisp
 (require 'package)
 (setq package-enable-at-startup nil)
-(setq package-archives '(("org"   . "http://orgmode.org/elpa/")
-                         ("gnu"   . "http://elpa.gnu.org/packages/")
-                         ("melpa" . "https://melpa.org/packages/")))
+(setq package-archives '(("melpa" . "https://melpa.org/packages/")))
 (package-initialize)
-;; Bootstrap `use-package`
 (setq package-check-signature nil)
 (unless (package-installed-p 'use-package)
   (package-refresh-contents)
@@ -266,35 +259,20 @@ G  - Goto
       org-log-done 'time
       org-cite-global-bibliography (list (my/localfile "../_bibliography/references.bib"))
       ebib-preload-bib-files (list (my/localfile "../_bibliography/references.bib"))
-      ;; Ohne dies landen <key>.org-Notizen im ersten Eintrag von
-      ;; ebib-file-search-dirs, das per Default auf "~" (also $HOME)
-      ;; steht.
       ebib-notes-directory (my/localfile "../_bibliography/notes/")
       ispell-program-name "hunspell")
 
 (setq bibtex-autokey-year-length 4
       bibtex-autokey-name-year-separator ""
       bibtex-autokey-titlewords 0
-      bibtex-autokey-titleword-length nil)
-
-;; Ohne dies bricht ebib bei einem Key-Duplikat ab, statt "2026a",
-;; "2026b" usw. anzuhängen.
-(setq ebib-uniquify-keys t)
+      bibtex-autokey-titleword-length nil
+      ebib-uniquify-keys t)
 
 (defun my/org-setup ()
   (interactive)
   (visual-line-mode))
 (add-hook 'org-mode-hook 'my/org-setup)
 ```
-
-(use-package citar
-:custom
-(citar-bibliography org-cite-global-bibliography)
-(citar-notes-paths (list (my/localfile "../<sub>bibliography</sub>/")))
-(citar-file-note-extensions (list "org"))
-(org-cite-insert-processor 'citar)
-(org-cite-follow-processor 'citar)
-(org-cite-activate-processor 'citar))
 
 
 # package: denote
@@ -306,7 +284,7 @@ G  - Goto
   :init
   (setq denote-directory (my/localfile "../_denote/"))
   (setq denote-save-buffers nil)
-  (setq denote-known-keywords '("emacs" "philosophie" ))
+  (setq denote-known-keywords '("emacs" "lernen" "soziologie" "philosophie" ))
   (setq denote-infer-keywords t)
   (setq denote-sort-keywords t)
   (setq denote-prompts '(title keywords))
@@ -333,8 +311,42 @@ G  - Goto
 
 ```
 
-;;  (general-define-key
-;;   (my/nav-key "<") '(my/org-narrow-toggle :wk "toggle subtree"))
+
+# my/jekyll-new-post
+
+```emacs-lisp
+(defun my/jekyll-slugify (title)
+  "TITLE in einen URL-tauglichen Slug umwandeln (Umlaute transliteriert)."
+  (let ((s (downcase title)))
+    (setq s (replace-regexp-in-string "ä" "ae" s))
+    (setq s (replace-regexp-in-string "ö" "oe" s))
+    (setq s (replace-regexp-in-string "ü" "ue" s))
+    (setq s (replace-regexp-in-string "ß" "ss" s))
+    (setq s (replace-regexp-in-string "[^a-z0-9]+" "-" s))
+    (replace-regexp-in-string "\\`-+\\|-+\\'" "" s)))
+
+(defun my/jekyll-new-post (title)
+  "Neuen Jekyll-Blogpost als Org-Quelle in _org/ anlegen und öffnen.
+Dateiname folgt dem Schema _org/YYYY-MM-DD-slug.org, das make org
+nach _posts/YYYY-MM-DD-slug.markdown exportiert."
+  (interactive "sTitel: ")
+  (let* ((date (format-time-string "%Y-%m-%d"))
+         (slug (my/jekyll-slugify title))
+         (file (my/localfile (format "../_org/%s-%s.org" date slug))))
+    (when (file-exists-p file)
+      (user-error "Datei existiert bereits: %s" file))
+    (find-file file)
+    (insert (format "#+TITLE: %s\n" title))
+    (insert (format "#+DATE: %s\n" (format-time-string "%Y-%m-%d %H:%M:%S %z")))
+    (insert "#+CATEGORIES: jekyll\n\n")
+    (insert "Kurze Einleitung.\n\n")
+    (insert "#+BEGIN_EXPORT html\n<!--more-->\n#+END_EXPORT\n\n")
+    (insert "* Abschnitt\n\n")
+    (insert "Text.\n")
+    (goto-char (point-min))
+    (forward-line 6)
+    (end-of-line)))
+```
 
 
 # evil-mode
@@ -392,22 +404,23 @@ G  - Goto
 # general keybindings
 
 ```emacs-lisp
-  (defun uka/dsync ()
-    (interactive)
-    (shell-command (concat "cd " (my/localfile "..") " && ./bin/dsync")))
+(defun uka/dsync ()
+  (interactive)
+  (shell-command (concat "cd " (my/localfile "..") " && make org"))
+  (shell-command (concat "cd " (my/localfile "..") " && ./bin/dsync"))
+  )
 
-  (defun my-escesc () ;; wenn META nicht klappt:
-    (interactive)
-    (evil-esc-mode 1) 
-    (setq evil-esc-delay 0.2))
+(defun my-escesc () ;; wenn META nicht klappt:
+  (interactive)
+  (evil-esc-mode 1) 
+  (setq evil-esc-delay 0.2))
 
   (my/leader-keys
-    ;;"SPC" '(counsel-M-x :wk "Counsel M-x")
     "SPC" '(execute-extended-command :wk "M-x")
     "TAB" '(comment-line :wk "Comment lines")
     "#" '(my-indirect-buffer :wk "note-bar")
     "." '(find-file :wk "Find file")
-    "," '(flyspell-correct-word-before-point :wk "Correct!")
+    ;;"," '(flyspell-correct-word-before-point :wk "Correct!") ;; flyspell-correct entfernt, s.u.
     ;;"a" '((lambda()(interactive)(org-agenda nil "n")) :wk "org-agenda")
     "c" '(count-words :wk "Count words")
     "u" '(universal-argument :wk "Universal argument")
@@ -421,8 +434,6 @@ G  - Goto
     "<right>" '(windmove-right :wk "Windmove Right")
     "<up>" '(windmove-up :wk "Windmove Up")
     "<down>" '(windmove-down :wk "Windmove Down")
-
-    ;; "<" '((lambda()(interactive)(uka/check (uka/d6) (uka/d6))) :wk "roll fair")
     )
 
   (my/leader-keys
@@ -453,12 +464,8 @@ G  - Goto
     "f c" '((lambda () (interactive)
               (find-file my/initfile))
             :wk "Open emacsinit.org")
-    ;; "f d" '(find-grep-dired :wk "Search for string in files in DIR")
-    ;; "f g" '(counsel-grep-or-swiper :wk "Search for string current file")
-    ;; "f j" '(counsel-file-jump :wk "Jump to a file below current directory")
-    ;; "f l" '(counsel-locate :wk "Locate a file")
     "f r" '(recentf-open-files :wk "Find recent files")
-    ;;"f r" '(counsel-recentf :wk "Find recent files")
+    "f n" '(my/jekyll-new-post :wk "Neuer Blogpost")
     )
 
   (my/leader-keys
@@ -468,13 +475,13 @@ G  - Goto
     "j s" '(org-store-link :wk "Store link")
     "j t" '(org-inlinetask-insert-task :wk "Inline task")
     "j l" '(org-todo-list :wk "Todo list")
-    "j j" '(org-journal-new-entry :wk "Neuer Eintrag")
-    "j h" '((lambda () (interactive) (org-journal-new-entry 1)) :wk "Heute")
+    ;;"j j" '(org-journal-new-entry :wk "Neuer Eintrag") ;; org-journal nicht installiert
+    ;;"j h" '((lambda () (interactive) (org-journal-new-entry 1)) :wk "Heute")
     )
 
   (my/leader-keys
     "l" '(:ignore t :wk "LLM")
-    "l l" '(gptel-send :wk "send to OpenAI"))
+    "l l" '(gptel-send :wk "send to OpenRouter"))
 
   (my/leader-keys
     "o" '(:ignore t :wk "org-mode")
