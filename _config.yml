@@ -63,7 +63,8 @@ scholar:
   source: ./_bibliography
   bibliography: references.bib
 
-  bibliography_template: "{{reference}}"
+  bibliography_template: >-
+    {{reference}}{% if entry.url %} [<a href="{{ entry.url }}">{{ entry.url }}</a>]{% endif %}
 
   replace_strings: true
   join_strings: true

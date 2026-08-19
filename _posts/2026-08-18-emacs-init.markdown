@@ -1,6 +1,6 @@
 ---
 layout: post
-title:  "Emacs - A Life in Text"
+title:  "Zuerst der Werkzeugkasten: Emacs"
 date:   2026-08-17 21:00:00 +0200
 categories: emacs org
 ---
@@ -10,15 +10,13 @@ in einer Terminalumgebung mit Org- und Markdown-Files, mit BibTeX-Verzeichnissen
 Automatisierungen umzugehen. Die Konfiguration von Emacs hängt sehr von persönlichen Vorlieben ab 
 und ist so individuell wie ein Fingerabdruck.
 
-Hier ist meine:
-
 <!--more-->
+
+Hier ist meine:
 
 Hilfreiche Standard-Shortcuts
 
 > ^x ^q - editable dired mode
-
-Hier kommt ein Zitat:{% cite keller2021 --locator 120ff %} 
 
 
 # relative paths
@@ -275,20 +273,29 @@ G  - Goto
       ebib-preload-bib-files (list (my/localfile "../_bibliography/references.bib"))
       ispell-program-name "hunspell")
 
-(use-package citar
-:custom
-(citar-bibliography org-cite-global-bibliography)
-(citar-notes-paths (list (my/localfile "../_bibliography/")))
-(citar-file-note-extensions (list "org"))
-(org-cite-insert-processor 'citar)
-(org-cite-follow-processor 'citar)
-(org-cite-activate-processor 'citar))
+(setq bibtex-autokey-year-length 4
+      bibtex-autokey-name-year-separator ""
+      bibtex-autokey-titlewords 0
+      bibtex-autokey-titleword-length nil)
+
+;; Ohne dies bricht ebib bei einem Key-Duplikat ab, statt "2026a",
+;; "2026b" usw. anzuhängen.
+(setq ebib-uniquify-keys t)
 
 (defun my/org-setup ()
   (interactive)
   (visual-line-mode))
 (add-hook 'org-mode-hook 'my/org-setup)
 ```
+
+(use-package citar
+:custom
+(citar-bibliography org-cite-global-bibliography)
+(citar-notes-paths (list (my/localfile "../<sub>bibliography</sub>/")))
+(citar-file-note-extensions (list "org"))
+(org-cite-insert-processor 'citar)
+(org-cite-follow-processor 'citar)
+(org-cite-activate-processor 'citar))
 
 
 # my/org-narrow-toggle
@@ -348,12 +355,14 @@ G  - Goto
 (add-to-list 'evil-emacs-state-modes 'eww-mode)
 (add-to-list 'evil-emacs-state-modes 'dired-mode)
 (add-to-list 'evil-emacs-state-modes 'org-side-tree)
-(add-to-list 'evil-emacs-state-modes 'elfeed-show-mode) 
-(add-to-list 'evil-emacs-state-modes 'elfeed-search-mode) 
-(add-to-list 'evil-emacs-state-modes 'nov-mode)
-(add-to-list 'evil-emacs-state-modes 'wl-folder-mode)
-(add-to-list 'evil-emacs-state-modes 'wl-summary-mode)
+;;(add-to-list 'evil-emacs-state-modes 'elfeed-show-mode) 
+;;(add-to-list 'evil-emacs-state-modes 'elfeed-search-mode) 
+;;(add-to-list 'evil-emacs-state-modes 'nov-mode)
+;;(add-to-list 'evil-emacs-state-modes 'wl-folder-mode)
+;;(add-to-list 'evil-emacs-state-modes 'wl-summary-mode)
 (add-to-list 'evil-emacs-state-modes 'mime-view-mode)
+(add-to-list 'evil-emacs-state-modes 'ebib-index-mode)
+(add-to-list 'evil-emacs-state-modes 'ebib-entry-mode)
 ```
 
 
@@ -444,15 +453,17 @@ G  - Goto
     "l" '(:ignore t :wk "LLM")
     "l l" '(gptel-send :wk "send to OpenAI"))
 
-  ;; (my/leader-keys
-    ;; "o" '(:ignore t :wk "org-mode")
+  (my/leader-keys
+    "o" '(:ignore t :wk "org-mode")
+    "o t" '(org-babel-tangle :wk "org-babel-tangle")
     ;; "o n" '(org-noter :wk "org-noter")
     ;; "o s" '(org-noter-sync-current-note :wk "sync org-note")
     ;; "o b" '((lambda () (interactive)
               ;; (find-file "~/org/bibliography.org")) 
             ;; :wk "Open Bibliography.org")
     ;; "o e" '(org-encrypt-entry :wk "encrypt entry")
-    ;; "o d" '(org-decrypt-entry :wk "decrypt entry"))
+    ;; "o d" '(org-decrypt-entry :wk "decrypt entry")
+    )
 
 (global-set-key (kbd "C-c l") 'org-store-link)
 (global-set-key (kbd "C-c a") 'org-agenda)
