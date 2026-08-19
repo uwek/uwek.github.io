@@ -22,10 +22,6 @@ Hilfreiche Standard-Shortcuts
 # relative paths
 
 ```emacs-lisp
-(buffer-file-name)
-```
-
-```emacs-lisp
 (setq my/initfile "/home/uwek/uwek.github.io/_org/2026-08-18-emacs-init.org")
 (defun my/localfile (fname)
   (expand-file-name (concat (file-name-directory my/initfile) fname)))
@@ -223,24 +219,23 @@ Hilfreiche Standard-Shortcuts
 <https://github.com/karthink/gptel>
 
 ```emacs-lisp
-  (use-package gptel
-;;  :init
-;;  (setq gptel-api-key my/api_openai)i
-)
+;; API-Key liegt nicht hier im Code, sondern in ~/.authinfo (unverschlüsselt,
+;; daher chmod 600). gptel-api-key-from-auth-source sucht dort nach Host
+;; "openrouter.ai" und User "apikey". Beispiel-Eintrag für ~/.authinfo:
+;;
+;;   machine openrouter.ai login apikey password sk-or-v1-DEIN-ECHTER-KEY
+(use-package gptel
+  :config
+  (setq-default
+   gptel-backend
+   (gptel-make-openai "OpenRouter"             ;Any name you want
+     :host "openrouter.ai"
+     :endpoint "/api/v1/chat/completions"
+     :stream t
+     :key #'gptel-api-key-from-auth-source
+     :models '(openai/gpt-5.6-luna anthropic/claude-haiku-4.5 anthropic/claude-sonnet-5))
+   gptel-model 'openai/gpt-5.6-luna ))
 ```
-
-;; OpenRouter offers an OpenAI compatible API
-(gptel-make-openai "OpenRouter"               ;Any name you want
-  :host "openrouter.ai"
-  :endpoint "/api/v1/chat/completions"
-  :stream t
-  :key "your-api-key"                   ;can be a function that returns the key
-  :models '(openai/gpt-3.5-turbo
-            mistralai/mixtral-8x7b-instruct
-            meta-llama/codellama-34b-instruct
-            codellama/codellama-70b-instruct
-            google/palm-2-codechat-bison-32k
-            google/gemini-pro))
 
 
 # eww
