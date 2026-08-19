@@ -22,6 +22,9 @@ Hilfreiche Standard-Shortcuts
 # relative paths
 
 ```emacs-lisp
+;; /home/uwek/uwek.github.io/_org/2026-08-18-emacs-init.org wird beim Tangle/Export durch den Pfad dieser
+;; Org-Datei ersetzt (Noweb wertet den Aufruf im Org-Buffer aus, nicht
+;; im getangelten init.el) - so kennt init.el seinen eigenen Ursprungsort.
 (setq my/initfile "/home/uwek/uwek.github.io/_org/2026-08-18-emacs-init.org")
 (defun my/localfile (fname)
   (expand-file-name (concat (file-name-directory my/initfile) fname)))
@@ -31,11 +34,10 @@ Hilfreiche Standard-Shortcuts
 # sane defaults
 
 ```emacs-lisp
-;; (if (fboundp 'scroll-bar-mode) (scroll-bar-mode -1))
 (if (fboundp 'tool-bar-mode) (tool-bar-mode -1))
 (if (fboundp 'menu-bar-mode) (menu-bar-mode -1))
 
-;;(setq warning-minimum-level :error)
+;; M-x customize soll init.el nicht verändern - Ziel ist eine Wegwerfdatei
 (setq custom-file (make-temp-file "emacs-custom"))
 (setq visible-bell 1)
 (setq inhibit-startup-screen t)
@@ -65,20 +67,25 @@ Hilfreiche Standard-Shortcuts
 
 # use-package
 
+use-package ist Emacs' De-facto-Standard, um Paket-Installation und
+-Konfiguration deklarativ und übersichtlich in einem einzigen Makro-Aufruf
+zu bündeln. diminish blendet Minor-Mode-Indikatoren aus der Modeline aus,
+die sonst jedes aktivierte Paket dort aufzählen würde.
+
 ```emacs-lisp
 (require 'package)
 (setq package-enable-at-startup nil)
 (setq package-archives '(("melpa" . "https://melpa.org/packages/")))
 (package-initialize)
-(setq package-check-signature nil)
+(setq package-check-signature nil) ;; keine GPG-Prüfung der Paketsignaturen
 (unless (package-installed-p 'use-package)
   (package-refresh-contents)
   (package-install 'use-package))
 (require 'use-package)
-(setq use-package-always-ensure t)
+(setq use-package-always-ensure t) ;; jedes use-package installiert fehlende Pakete automatisch (:ensure t global)
 (setq use-package-always-defer nil)
 (setq use-package-verbose t)
-(setq use-package-compute-statistics t)
+(setq use-package-compute-statistics t) ;; Ladezeiten je Paket, siehe use-package-report
 
 (use-package diminish)
 ```
@@ -86,11 +93,15 @@ Hilfreiche Standard-Shortcuts
 
 # package: general
 
+general.el ist ein Framework für Keybindings, das eine einheitliche Syntax
+für normale Emacs- und evil-Zustände bietet und "Leader key"-Definierer
+wie unten `my/leader-keys` bereitstellt.
+
 ```emacs-lisp
 (use-package general
   :config
   (general-evil-setup t)
-  (general-auto-unbind-keys)
+  (general-auto-unbind-keys) ;; kollidierende Alt-Bindings automatisch entfernen statt Fehler zu werfen
   (general-create-definer my/leader-keys
     :keymaps 'override
     :states '(normal insert visual emacs)
@@ -102,12 +113,15 @@ Hilfreiche Standard-Shortcuts
 
 # package: eyebrowse
 
+eyebrowse verwaltet nummerierte Window-Configs pro Frame (ähnlich Fenstern/
+Tabs in tmux) - schneller Wechsel zwischen kompletten Fenster-Layouts.
+
 ```emacs-lisp
 (use-package eyebrowse :ensure t
   :diminish eyebrowse-mode
   :config
   (eyebrowse-mode t)
-  (setq eyebrowse-new-workspace t))
+  (setq eyebrowse-new-workspace t)) ;; neuer Slot startet leer statt das aktuelle Layout zu kopieren
 ```
 
 
@@ -117,8 +131,6 @@ Hilfreiche Standard-Shortcuts
 (use-package dired
   :ensure nil ;; built-in
   :defer t
-  ;; :hook
-  ;;   (dired-mode . dired-hide-details-mode)
   :config
   (setq dired-dwim-target t)                  ;; do what I mean
   (setq dired-recursive-copies 'always)       ;; don't ask when copying directories
@@ -136,21 +148,22 @@ Hilfreiche Standard-Shortcuts
             insert-directory-program gls
             dired-listing-switches "-aBhl  --group-directories-first"))))
 
+;; überschreibt die 'always oben (nur bei Top-Level-Verzeichnis nachfragen, nicht rekursiv)
 (setq dired-recursive-copies 'top)
 (setq dired-recursive-deletes 'top)
-;; (setq dired-use-ls-dired nil)
-;; (dired-hide-details-mode)
 
 ```
 
 
 # package: complete - marginalia
 
+marginalia zeigt zusätzliche Infos (Dateigröße, Docstrings usw.) rechts
+neben den Kandidaten im Minibuffer an - ergänzt vertico visuell.
+
 ```emacs-lisp
 (use-package marginalia
   :custom
   (marginalia-max-relative-age 0)
-  ;; (marginalia-align 'right)
   :init
   (marginalia-mode))
 ```
@@ -158,13 +171,15 @@ Hilfreiche Standard-Shortcuts
 
 # package: complete - vertico
 
+vertico stellt Minibuffer-Vervollständigung (Dateien, Befehle, Buffer, &#x2026;)
+als vertikale, durchsuchbare Kandidatenliste dar statt der Standard-Zeile.
+
 ```emacs-lisp
 (use-package vertico
   :custom
-  ;; (vertico-count 13)                    ; Number of candidates to display
-  ;; (vertico-resize t)
   (vertico-cycle nil) ; Go from last to first candidate and first to last (cycle)?
   :config
+  ;; C-c C-c übernimmt die eingetippte Eingabe wörtlich statt des markierten Kandidaten
   (define-key vertico-map (kbd "C-c C-c") #'vertico-exit-input)
   (vertico-mode))
 ```
@@ -172,19 +187,22 @@ Hilfreiche Standard-Shortcuts
 
 # package: complete - orderless
 
+orderless ist ein Completion-Style: Suchbegriffe müssen nicht als
+zusammenhängendes Präfix vorkommen, sondern nur als beliebig angeordnete,
+durch Leerzeichen getrennte Fragmente ("foo bar" matcht "bar-and-foo").
+
 ```emacs-lisp
 (use-package orderless
   :custom
   (completion-styles '(orderless))      ; Use orderless
-  ;; (completion-category-defaults nil)    ; I want to be in control!
-  ;; (completion-category-overrides
-  ;;  '((file (styles basic-remote ; For `tramp' hostname completion with `vertico'
-  ;;                  orderless))))
   )
 ```
 
 
 # package: which-key
+
+which-key zeigt nach einem angeschlagenen Präfix (z. B. SPC) nach kurzer
+Pause ein Popup mit allen möglichen Folgetasten und ihrer Bedeutung an.
 
 ```emacs-lisp
 (use-package which-key
@@ -196,13 +214,16 @@ Hilfreiche Standard-Shortcuts
 
 # package: doom-modeline
 
+doom-modeline (ursprünglich aus Doom Emacs) ist eine informationsreiche
+Modeline mit Segmenten für VC-Status, Flycheck/Flymake, Wortanzahl u. a.
+
 ```emacs-lisp
 (use-package doom-modeline
   :config
   (setq doom-modeline-buffer-encoding nil)
   (setq doom-modeline-icon nil)
   (setq doom-modeline-enable-word-count t)
- (display-battery-mode 1)
+ (display-battery-mode 1) ;; eigenständiger globaler Minor-Mode, unabhängig von doom-modeline, füllt aber dessen Batterie-Segment
   (doom-modeline-mode))
 ```
 
@@ -210,6 +231,10 @@ Hilfreiche Standard-Shortcuts
 # package: gptel
 
 <https://github.com/karthink/gptel>
+
+gptel ist ein einfaches LLM-Chat-/Assistenten-Interface für Emacs, das
+verschiedene Backends (OpenAI, Anthropic, lokale Modelle, OpenRouter, &#x2026;)
+unterstützt und direkt in Buffern chatten oder Text senden lässt.
 
 ```emacs-lisp
 ;; API-Key liegt nicht hier im Code, sondern in ~/.authinfo (unverschlüsselt,
@@ -239,17 +264,24 @@ G  - Goto
 
 ```emacs-lisp
 (require 'url-http)
+;; eww nur im Terminal (kein window-system) als Standardbrowser nutzen -
+;; unter X/Wayland soll ein echter Browser die Links öffnen
 (if (not (window-system))
     (progn
       (setq browse-url-browser-function 'eww-browse-url)
+      ;; manche Seiten blocken eww anhand seines echten User-Agents
       (setq url-user-agent "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/75.0.3739.0 Safari/537.36\n") (setq shr-use-colors nil)
       ))
 
-(add-hook 'eww-after-render-hook #'eww-readable)
+(add-hook 'eww-after-render-hook #'eww-readable) ;; jede Seite automatisch in die Lesbarkeits-Ansicht schalten
 ```
 
 
 # org-mode, ebib und org-cite
+
+ebib ist ein BibTeX-Datenbank-Manager mit eigener Buffer-UI zum Durchsuchen,
+Bearbeiten und Anlegen von Literatureinträgen, hier verzahnt mit org-cite
+(`[cite:@key]`) über dieselbe references.bib.
 
 ```emacs-lisp
 (require 'org-tempo)
@@ -262,6 +294,8 @@ G  - Goto
       ebib-notes-directory (my/localfile "../_bibliography/notes/")
       ispell-program-name "hunspell")
 
+;; Key-Schema Autor+Jahr ohne Titelwörter (z. B. "schmidt2023"); da das
+;; Duplikate erzeugen kann, hängt ebib-uniquify-keys bei Kollision a/b/... an
 (setq bibtex-autokey-year-length 4
       bibtex-autokey-name-year-separator ""
       bibtex-autokey-titlewords 0
@@ -279,6 +313,10 @@ G  - Goto
 
 <https://protesilaos.com/emacs/denote>
 
+denote ist ein schlankes Notiz-Paket ohne Datenbank: Dateien folgen einem
+festen Namensschema (Datum, Titel, Keywords), das Sortierung, Verlinkung
+und Backlinks allein aus dem Dateinamen ableitbar macht.
+
 ```emacs-lisp
 (use-package denote
   :init
@@ -288,12 +326,9 @@ G  - Goto
   (setq denote-infer-keywords t)
   (setq denote-sort-keywords t)
   (setq denote-prompts '(title keywords))
-  ;;(setq denote-excluded-directories-regexp nil)
-  ;;(setq denote-excluded-keywords-regexp nil)
   ;; Pick dates, where relevant, with Org's advanced interface:
   (setq denote-date-prompt-use-org-read-date t)
   :config
-  ;; OR if only want it in `denote-dired-directories':
   (add-hook 'dired-mode-hook #'denote-dired-mode-in-directories)
   (setq denote-rename-confirmations '(rewrite-front-matter modify-file-name)))
 ```
@@ -308,7 +343,6 @@ G  - Goto
   (if (buffer-narrowed-p)
       (widen)
     (org-narrow-to-subtree)))
-
 ```
 
 
@@ -344,12 +378,16 @@ nach _posts/YYYY-MM-DD-slug.markdown exportiert."
     (insert "* Abschnitt\n\n")
     (insert "Text.\n")
     (goto-char (point-min))
-    (forward-line 6)
+    (forward-line 6) ;; landet auf "Kurze Einleitung." - Zeilenzahl an obige insert-Aufrufe gekoppelt
     (end-of-line)))
 ```
 
 
 # evil-mode
+
+evil bringt modales (vi-artiges) Editieren nach Emacs. evil-collection
+liefert dazu passende Normal-State-Bindings für viele eingebaute und
+externe Modes, die evil sonst nicht "vi-tauglich" machen würde.
 
 ```emacs-lisp
 (use-package evil
@@ -366,9 +404,10 @@ nach _posts/YYYY-MM-DD-slug.markdown exportiert."
 (use-package evil-collection
   :after evil
   :config
-  (setq evil-collection-mode-list '(dashboard ibuffer)) 
-  ;; (setq evil-collection-mode-list '(dashboard dired ibuffer)) 
-  (evil-collection-init)) 
+  ;; nur für diese Modes laden statt für evil-collections gesamte Modeliste
+  ;; (schnellerer Start, weniger ungewollte Rebinds in anderen Modes)
+  (setq evil-collection-mode-list '(dashboard ibuffer))
+  (evil-collection-init))
 
 ;; Using RETURN to follow links in Org/Evil 
 ;; Unmap keys in 'evil-maps if not done, (setq org-return-follows-link t) will not work
@@ -390,11 +429,6 @@ nach _posts/YYYY-MM-DD-slug.markdown exportiert."
 (add-to-list 'evil-emacs-state-modes 'eww-mode)
 (add-to-list 'evil-emacs-state-modes 'dired-mode)
 (add-to-list 'evil-emacs-state-modes 'org-side-tree)
-;;(add-to-list 'evil-emacs-state-modes 'elfeed-show-mode) 
-;;(add-to-list 'evil-emacs-state-modes 'elfeed-search-mode) 
-;;(add-to-list 'evil-emacs-state-modes 'nov-mode)
-;;(add-to-list 'evil-emacs-state-modes 'wl-folder-mode)
-;;(add-to-list 'evil-emacs-state-modes 'wl-summary-mode)
 (add-to-list 'evil-emacs-state-modes 'mime-view-mode)
 (add-to-list 'evil-emacs-state-modes 'ebib-index-mode)
 (add-to-list 'evil-emacs-state-modes 'ebib-entry-mode)
@@ -406,9 +440,7 @@ nach _posts/YYYY-MM-DD-slug.markdown exportiert."
 ```emacs-lisp
 (defun uka/dsync ()
   (interactive)
-  (shell-command (concat "cd " (my/localfile "..") " && make org"))
-  (shell-command (concat "cd " (my/localfile "..") " && ./bin/dsync"))
-  )
+  (shell-command (concat "cd " (my/localfile "..") " && make org  && ./bin/dsync")))
 
 (defun my-escesc () ;; wenn META nicht klappt:
   (interactive)
@@ -420,7 +452,6 @@ nach _posts/YYYY-MM-DD-slug.markdown exportiert."
     "TAB" '(comment-line :wk "Comment lines")
     "#" '(my-indirect-buffer :wk "note-bar")
     "." '(find-file :wk "Find file")
-    ;;"," '(flyspell-correct-word-before-point :wk "Correct!") ;; flyspell-correct entfernt, s.u.
     ;;"a" '((lambda()(interactive)(org-agenda nil "n")) :wk "org-agenda")
     "c" '(count-words :wk "Count words")
     "u" '(universal-argument :wk "Universal argument")
@@ -475,8 +506,6 @@ nach _posts/YYYY-MM-DD-slug.markdown exportiert."
     "j s" '(org-store-link :wk "Store link")
     "j t" '(org-inlinetask-insert-task :wk "Inline task")
     "j l" '(org-todo-list :wk "Todo list")
-    ;;"j j" '(org-journal-new-entry :wk "Neuer Eintrag") ;; org-journal nicht installiert
-    ;;"j h" '((lambda () (interactive) (org-journal-new-entry 1)) :wk "Heute")
     )
 
   (my/leader-keys
@@ -486,13 +515,6 @@ nach _posts/YYYY-MM-DD-slug.markdown exportiert."
   (my/leader-keys
     "o" '(:ignore t :wk "org-mode")
     "o t" '(org-babel-tangle :wk "org-babel-tangle")
-    ;; "o n" '(org-noter :wk "org-noter")
-    ;; "o s" '(org-noter-sync-current-note :wk "sync org-note")
-    ;; "o b" '((lambda () (interactive)
-              ;; (find-file "~/org/bibliography.org")) 
-            ;; :wk "Open Bibliography.org")
-    ;; "o e" '(org-encrypt-entry :wk "encrypt entry")
-    ;; "o d" '(org-decrypt-entry :wk "decrypt entry")
     )
 
 (global-set-key (kbd "C-c l") 'org-store-link)
@@ -519,16 +541,8 @@ nach _posts/YYYY-MM-DD-slug.markdown exportiert."
     "t" '(:ignore t :wk "Toggle")
     ;; "t t" '(org-side-tree :wk "org-side-tree")
     ;; "t n" '(org-side-tree-toggle-narrow-on-jump :wk "o-s-t: narrow")
-    ;;"t d" '(darkroom-mode :wk "Darkroom-Mode")
+    "t d" '(dired-hide-details-mode :wk "dired - hide details")
     "t t" '(my/org-narrow-toggle :wk "toggle subTree narrow")
     )
-
-  ;;(my/leader-keys
-  ;;  "w" '(:ignore t :wk "www")
-  ;;  "w w" '((lambda () (interactive) (my-qweb "w")) :wk "Wikipedia")
-  ;;  "w d" '((lambda () (interactive) (my-qweb "d")) :wk "DuckDuckGo")
-  ;;  "w s" '((lambda () (interactive) (my-qweb "s")) :wk "Plato@Stanford")
-  ;;  "w f" '(elfeed :wk "elfeed")
-  ;;  )
 ```
 
