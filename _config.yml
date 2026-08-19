@@ -85,9 +85,11 @@ scholar:
 #
 exclude:
     - bin/
+    - _trash/
     - _org/
     - _denote/
     - Makefile
+    - CLAUDE.md
 
 #   - .sass-cache/
 #   - .jekyll-cache/
