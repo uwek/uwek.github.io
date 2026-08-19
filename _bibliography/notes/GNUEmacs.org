@@ -1,0 +1,7 @@
+* GNU Project (2026): GNU Emacs
+:PROPERTIES:
+:Custom_id: GNUEmacs
+:END:
+
+
+Notizen -2-3-4

@@ -256,7 +256,7 @@ G  - Goto
 ```
 
 
-# org-mode basic
+# org-mode, ebib und org-cite
 
 ```emacs-lisp
 (require 'org-tempo)
@@ -266,6 +266,10 @@ G  - Goto
       org-log-done 'time
       org-cite-global-bibliography (list (my/localfile "../_bibliography/references.bib"))
       ebib-preload-bib-files (list (my/localfile "../_bibliography/references.bib"))
+      ;; Ohne dies landen <key>.org-Notizen im ersten Eintrag von
+      ;; ebib-file-search-dirs, das per Default auf "~" (also $HOME)
+      ;; steht.
+      ebib-notes-directory (my/localfile "../_bibliography/notes/")
       ispell-program-name "hunspell")
 
 (setq bibtex-autokey-year-length 4
@@ -291,6 +295,30 @@ G  - Goto
 (org-cite-insert-processor 'citar)
 (org-cite-follow-processor 'citar)
 (org-cite-activate-processor 'citar))
+
+
+# package: denote
+
+<https://protesilaos.com/emacs/denote>
+
+```emacs-lisp
+(use-package denote
+  :init
+  (setq denote-directory (my/localfile "../_denote/"))
+  (setq denote-save-buffers nil)
+  (setq denote-known-keywords '("emacs" "philosophie" ))
+  (setq denote-infer-keywords t)
+  (setq denote-sort-keywords t)
+  (setq denote-prompts '(title keywords))
+  ;;(setq denote-excluded-directories-regexp nil)
+  ;;(setq denote-excluded-keywords-regexp nil)
+  ;; Pick dates, where relevant, with Org's advanced interface:
+  (setq denote-date-prompt-use-org-read-date t)
+  :config
+  ;; OR if only want it in `denote-dired-directories':
+  (add-hook 'dired-mode-hook #'denote-dired-mode-in-directories)
+  (setq denote-rename-confirmations '(rewrite-front-matter modify-file-name)))
+```
 
 
 # my/org-narrow-toggle
@@ -394,7 +422,7 @@ G  - Goto
     "<up>" '(windmove-up :wk "Windmove Up")
     "<down>" '(windmove-down :wk "Windmove Down")
 
-    "<" '((lambda()(interactive)(uka/check (uka/d6) (uka/d6))) :wk "roll fair")
+    ;; "<" '((lambda()(interactive)(uka/check (uka/d6) (uka/d6))) :wk "roll fair")
     )
 
   (my/leader-keys
@@ -407,13 +435,13 @@ G  - Goto
 
 (my/leader-keys
   "d" '(:ignore t :wk "Denote")    
-  ;; "d d" '((lambda () (interactive) (find-file (my/localfile "org/denotes"))) :wk "list notes")
+  "d d" '((lambda () (interactive) (find-file (my/localfile "../_denote/"))) :wk "list notes")
   "d n" '(denote :wk "new note")
   "d r" '(denote-rename-file :wk "rename")
   "d l" '(denote-link :wk "link")
   "d c" '(denote-link-after-creating :wk "create and link")
   "d b" '(denote-backlinks :wk "backlinks")
-  "d d" '(denote-dired :wk "dired")
+  "d D" '(denote-dired :wk "dired")
   "d g" '(denote-grep :wk "grep")
   )
 
@@ -467,6 +495,7 @@ G  - Goto
   (my/leader-keys
     "r" '(:ignore t :wk "References")
     "r +" '(bibtex-entry :wk "Bibtex - neu")
+    "r b" '(ebib :wk "ebib")
     "r c" '(bibtex-clean-entry :wk "Bibtex - clean")
     "r f" '(bibtex-reformat :wk "Bibtex - reformat")
     "r r" '(org-cite-insert :wk "cite")
@@ -474,7 +503,7 @@ G  - Goto
 
   (my/leader-keys
     "s" '(:ignore t :wk "Schreiben")
-    "s i" '(scriv :wk "Schreib-Mode")
+  ;;  "s i" '(scriv :wk "Schreib-Mode")
     "s r" '(flyspell-buffer :wk "Rechtschreibprüfung")
     "s c" '((lambda () (interactive) (flyspell-mode -1)) :wk "clear highlights")
     )
@@ -487,24 +516,12 @@ G  - Goto
     "t t" '(my/org-narrow-toggle :wk "toggle subTree narrow")
     )
 
-  (my/leader-keys
-    "w" '(:ignore t :wk "www")
-    "w w" '((lambda () (interactive) (my-qweb "w")) :wk "Wikipedia")
-    "w d" '((lambda () (interactive) (my-qweb "d")) :wk "DuckDuckGo")
-    "w s" '((lambda () (interactive) (my-qweb "s")) :wk "Plato@Stanford")
-    "w f" '(elfeed :wk "elfeed")
-    )
-(global-set-key (kbd "M-o") 'other-window)
-
-;; (global-set-key (kbd "\C-t") 'eshell-toggle)
-;;(define-key evil-normal-state-map (kbd "C-t") 'eshell-toggle)
-;;(define-key evil-insert-state-map (kbd "C-t") 'eshell-toggle)
-```
-
-```emacs-lisp
-(define-prefix-command 'my-map)
-(global-set-key (kbd "\C-q") 'my-map)
-(define-key my-map (kbd "\C-q") 'quoted-insert)
-(define-key my-map (kbd "SPC") 'uka/loner)
+  ;;(my/leader-keys
+  ;;  "w" '(:ignore t :wk "www")
+  ;;  "w w" '((lambda () (interactive) (my-qweb "w")) :wk "Wikipedia")
+  ;;  "w d" '((lambda () (interactive) (my-qweb "d")) :wk "DuckDuckGo")
+  ;;  "w s" '((lambda () (interactive) (my-qweb "s")) :wk "Plato@Stanford")
+  ;;  "w f" '(elfeed :wk "elfeed")
+  ;;  )
 ```
 

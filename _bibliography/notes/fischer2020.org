@@ -1,0 +1,8 @@
+* Fischer, Peter (2020): Content-Management ohne Datenbank: eine Bestandsaufnahme
+:PROPERTIES:
+:Custom_id: fischer2020
+:END:
+
+
+Notizen !!!!
+!
