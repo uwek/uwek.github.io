@@ -16,3 +16,7 @@
 # bundle init
 # bundle add jekyll  # oder: bundle add github-pages --group jekyll_plugins
 
+# sudo apt install -y emacs-nox
+# sudo apt install -y elpa-ebib
+sudo apt install -y hunspell hunspell-de-de
+

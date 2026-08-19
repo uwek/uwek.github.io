@@ -1,0 +1,1205 @@
+#+TITLE: Emacs - A Life in Text
+#+LAYOUT: post
+#+DATE: 2026-08-17 21:00:00 +0200
+#+CATEGORIES: emacs org
+#+STARTUP: content indent
+#+TODO: TODO | DONE 
+#+PROPERTY: header-args :tangle ~/.emacs.d/init.el :coding utf-8-unix
+
+Obwohl ich keinen heiligen Krieg entfachen will - Emacs ist und bleibt das beste Werkzeug, um 
+in einer Terminalumgebung mit Org- und Markdown-Files, mit BibTeX-Verzeichnissen und 
+Automatisierungen umzugehen. Die Konfiguration von Emacs hängt sehr von persönlichen Vorlieben ab 
+und ist so individuell wie ein Fingerabdruck.
+
+Hier ist meine:
+
+#+BEGIN_EXPORT html
+<!--more-->
+#+END_EXPORT
+
+Hilfreiche Standard-Shortcuts
+#+begin_quote
+^x ^q - editable dired mode
+#+end_quote
+
+Hier kommt ein Zitat:[cite:@keller2021, p. 120ff] 
+
+* relative paths
+#+NAME: my/vinitfile
+#+BEGIN_SRC emacs-lisp :tangle no
+  (buffer-file-name)
+#+END_SRC
+
+#+begin_src emacs-lisp :noweb yes
+  (setq my/initfile "<<my/vinitfile()>>")
+  (defun my/localfile (fname)
+    (expand-file-name (concat (file-name-directory my/initfile) fname)))
+#+end_src    
+
+* Config
+* sane defaults
+#+begin_src emacs-lisp
+    ;; (if (fboundp 'scroll-bar-mode) (scroll-bar-mode -1))
+    (if (fboundp 'tool-bar-mode) (tool-bar-mode -1))
+    (if (fboundp 'menu-bar-mode) (menu-bar-mode -1))
+
+    ;;(setq warning-minimum-level :error)
+    (setq custom-file (make-temp-file "emacs-custom"))
+    (setq visible-bell 1)
+    (setq inhibit-startup-screen t)
+    (defalias 'yes-or-no-p 'y-or-n-p)
+    (setq make-backup-files nil)
+    (show-paren-mode)
+    (electric-indent-mode -1)
+
+    (recentf-mode 1)
+    (setq history-length 25)
+    (savehist-mode 1)
+    (save-place-mode 1)
+    (global-auto-revert-mode 1)
+    (setq global-auto-revert-non-file-buffers t)
+
+    (setq system-time-locale "de_DE.UTF-8")
+    (prefer-coding-system 'utf-8-unix)
+    (set-default-coding-systems 'utf-8-unix)
+    (set-terminal-coding-system 'utf-8-unix)
+    (set-keyboard-coding-system 'utf-8-unix)
+
+;; (xterm-mouse-mode 1)
+;; (xterm-mouse-mode 0)
+
+    (load-theme 'modus-vivendi)
+#+end_src
+
+* use-package
+#+BEGIN_SRC emacs-lisp
+  (require 'package)
+  (setq package-enable-at-startup nil)
+  (setq package-archives '(("org"   . "http://orgmode.org/elpa/")
+                           ("gnu"   . "http://elpa.gnu.org/packages/")
+                           ("melpa" . "https://melpa.org/packages/")))
+  (package-initialize)
+  ;; Bootstrap `use-package`
+  (setq package-check-signature nil)
+  (unless (package-installed-p 'use-package)
+    (package-refresh-contents)
+    (package-install 'use-package))
+  (require 'use-package)
+  (setq use-package-always-ensure t)
+  (setq use-package-always-defer nil)
+  (setq use-package-verbose t)
+  (setq use-package-compute-statistics t)
+
+  (use-package diminish)
+#+END_SRC
+
+* package: general
+#+begin_src emacs-lisp
+    (use-package general
+      :config
+      (general-evil-setup t)
+      (general-auto-unbind-keys)
+      (general-create-definer my/leader-keys
+        :keymaps 'override
+        :states '(normal insert visual emacs)
+        :prefix "SPC" ;; set leader
+        :global-prefix "M-SPC" ;; access leader in insert mode
+        ))
+#+end_src
+
+#+RESULTS:
+: #s(hash-table data (:use-package (27269 18010 143569 572000) :init (27269 18010 143565 912000) :config (27269 18010 143385 556000) :config-secs (0 0 237765 780000) :init-secs (0 0 241676 382000) :use-package-secs (0 0 243955 873000)))
+
+* package: eyebrowse
+#+BEGIN_SRC emacs-lisp
+  (use-package eyebrowse :ensure t
+    :diminish eyebrowse-mode
+    :config
+    (eyebrowse-mode t)
+    (setq eyebrowse-new-workspace t))
+#+END_SRC
+
+* dired
+#+begin_src emacs-lisp
+  (use-package dired
+    :ensure nil ;; built-in
+    :defer t
+    ;; :hook
+    ;;   (dired-mode . dired-hide-details-mode)
+    :config
+    (setq dired-dwim-target t)                  ;; do what I mean
+    (setq dired-recursive-copies 'always)       ;; don't ask when copying directories
+    (setq dired-create-destination-dirs 'ask)   
+    (setq dired-clean-confirm-killing-deleted-buffers nil)
+    (setq dired-make-directory-clickable t)
+    (setq dired-mouse-drag-files t)
+    (setq dired-kill-when-opening-new-dired-buffer t)   ;; Tidy up open buffers by default
+  )
+
+  (when (eq system-type 'darwin)
+    (let ((gls (executable-find "gls")))
+      (when gls
+        (setq dired-use-ls-dired t
+              insert-directory-program gls
+              dired-listing-switches "-aBhl  --group-directories-first"))))
+
+  (setq dired-recursive-copies 'top)
+  (setq dired-recursive-deletes 'top)
+  ;; (setq dired-use-ls-dired nil)
+  ;; (dired-hide-details-mode)
+
+#+end_src
+
+* package: complete - marginalia
+#+begin_src emacs-lisp
+(use-package marginalia
+  :custom
+  (marginalia-max-relative-age 0)
+  ;; (marginalia-align 'right)
+  :init
+  (marginalia-mode))
+#+end_src
+
+* package: complete - vertico
+#+begin_src emacs-lisp
+  (use-package vertico
+    :custom
+    ;; (vertico-count 13)                    ; Number of candidates to display
+    ;; (vertico-resize t)
+    (vertico-cycle nil) ; Go from last to first candidate and first to last (cycle)?
+    :config
+    (define-key vertico-map (kbd "C-c C-c") #'vertico-exit-input)
+    (vertico-mode))
+#+end_src
+
+#+RESULTS:
+: #s(hash-table data (:use-package (27269 20484 814340 398000) :init (27269 20484 814333 498000) :config (27269 20484 813827 719000) :config-secs (0 0 714 733000) :init-secs (0 0 2432 563000) :use-package-secs (0 0 3526 280000)))
+
+* package: complete - orderless
+#+begin_src emacs-lisp
+  (use-package orderless
+    :custom
+    (completion-styles '(orderless))      ; Use orderless
+    ;; (completion-category-defaults nil)    ; I want to be in control!
+    ;; (completion-category-overrides
+    ;;  '((file (styles basic-remote ; For `tramp' hostname completion with `vertico'
+    ;;                  orderless))))
+    )
+#+end_src
+
+* package: which-key
+#+BEGIN_SRC emacs-lisp
+  (use-package which-key
+    :diminish
+    :config
+    (which-key-mode 1))
+#+END_SRC
+
+* package: doom-modeline
+#+begin_src emacs-lisp
+  (use-package doom-modeline
+    :config
+    (setq doom-modeline-buffer-encoding nil)
+    (setq doom-modeline-icon nil)
+    (setq doom-modeline-enable-word-count t)
+   (display-battery-mode 1)
+    (doom-modeline-mode))
+#+end_src
+
+* package: gptel
+https://github.com/karthink/gptel
+#+begin_src emacs-lisp
+  (use-package gptel
+;;  :init
+;;  (setq gptel-api-key my/api_openai)i
+)
+#+end_src
+
+;; OpenRouter offers an OpenAI compatible API
+(gptel-make-openai "OpenRouter"               ;Any name you want
+  :host "openrouter.ai"
+  :endpoint "/api/v1/chat/completions"
+  :stream t
+  :key "your-api-key"                   ;can be a function that returns the key
+  :models '(openai/gpt-3.5-turbo
+            mistralai/mixtral-8x7b-instruct
+            meta-llama/codellama-34b-instruct
+            codellama/codellama-70b-instruct
+            google/palm-2-codechat-bison-32k
+            google/gemini-pro))
+
+* eww
+R  - readable view
+bB - Bookmark(s)
+G  - Goto
+
+#+begin_src emacs-lisp
+  (require 'url-http)
+  (if (not (window-system))
+      (progn
+        (setq browse-url-browser-function 'eww-browse-url)
+        (setq url-user-agent "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/75.0.3739.0 Safari/537.36\n") (setq shr-use-colors nil)
+        ))
+    
+  (add-hook 'eww-after-render-hook #'eww-readable)
+#+end_src
+
+* org-mode basic
+#+begin_src emacs-lisp
+  (require 'org-tempo)
+  (require 'org-inlinetask)
+  (setq org-use-speed-commands t
+        org-support-shift-select 1 
+        org-log-done 'time
+        org-cite-global-bibliography (list (my/localfile "../_bibliography/references.bib"))
+        ebib-preload-bib-files (list (my/localfile "../_bibliography/references.bib"))
+        ispell-program-name "hunspell")
+
+  (use-package citar
+  :custom
+  (citar-bibliography org-cite-global-bibliography)
+  (citar-notes-paths (list (my/localfile "../_bibliography/")))
+  (citar-file-note-extensions (list "org"))
+  (org-cite-insert-processor 'citar)
+  (org-cite-follow-processor 'citar)
+  (org-cite-activate-processor 'citar))
+
+  (defun my/org-setup ()
+    (interactive)
+    (visual-line-mode))
+  (add-hook 'org-mode-hook 'my/org-setup)
+#+end_src
+
+* my/org-narrow-toggle
+#+begin_src emacs-lisp
+  (defun my/org-narrow-toggle ()
+    "Toggle org narrow subtreee / show everything"
+    (interactive)
+    (if (buffer-narrowed-p)
+        (widen)
+      (org-narrow-to-subtree)))
+
+#+end_src
+;;  (general-define-key
+;;   (my/nav-key "<") '(my/org-narrow-toggle :wk "toggle subtree"))
+
+* evil-mode
+#+begin_src emacs-lisp
+  (use-package evil
+    :init      ;; tweak evil's configuration before loading it
+    (setq evil-want-integration t) ;; This is optional since it's already set to t by default.
+    (setq evil-want-keybinding nil)
+    (setq evil-vsplit-window-right t)
+    (setq evil-split-window-below t)
+    (setq evil-move-beyond-eol t)
+    (setq evil-respect-visual-line-mode t)
+    (evil-mode)
+    ) 
+
+  (use-package evil-collection
+    :after evil
+    :config
+    (setq evil-collection-mode-list '(dashboard ibuffer)) 
+    ;; (setq evil-collection-mode-list '(dashboard dired ibuffer)) 
+    (evil-collection-init)) 
+
+  ;; Using RETURN to follow links in Org/Evil 
+  ;; Unmap keys in 'evil-maps if not done, (setq org-return-follows-link t) will not work
+  (with-eval-after-load 'evil-maps
+    ;; Make movement keys work like they should
+    (define-key evil-normal-state-map (kbd "<remap> <evil-next-line>") 'evil-next-visual-line)
+    (define-key evil-normal-state-map (kbd "<remap> <evil-previous-line>") 'evil-previous-visual-line)
+    (define-key evil-motion-state-map (kbd "<remap> <evil-next-line>") 'evil-next-visual-line)
+    (define-key evil-motion-state-map (kbd "<remap> <evil-previous-line>") 'evil-previous-visual-line)
+    (define-key evil-motion-state-map (kbd "SPC") nil)
+    (define-key evil-motion-state-map (kbd "RET") nil)
+    (define-key evil-motion-state-map (kbd "TAB") nil))
+
+  ;; Make horizontal movement cross lines                                    
+  (setq-default evil-cross-lines t)
+
+  ;; Setting RETURN key in org-mode to follow links
+  (setq org-return-follows-link  t)
+  (add-to-list 'evil-emacs-state-modes 'eww-mode)
+  (add-to-list 'evil-emacs-state-modes 'dired-mode)
+  (add-to-list 'evil-emacs-state-modes 'org-side-tree)
+  (add-to-list 'evil-emacs-state-modes 'elfeed-show-mode) 
+  (add-to-list 'evil-emacs-state-modes 'elfeed-search-mode) 
+  (add-to-list 'evil-emacs-state-modes 'nov-mode)
+  (add-to-list 'evil-emacs-state-modes 'wl-folder-mode)
+  (add-to-list 'evil-emacs-state-modes 'wl-summary-mode)
+  (add-to-list 'evil-emacs-state-modes 'mime-view-mode)
+#+END_SRC
+
+* general keybindings
+#+BEGIN_SRC emacs-lisp
+    (defun uka/dsync ()
+      (interactive)
+      (shell-command (concat "cd " (my/localfile "..") " && ./bin/dsync")))
+
+    (defun my-escesc () ;; wenn META nicht klappt:
+      (interactive)
+      (evil-esc-mode 1) 
+      (setq evil-esc-delay 0.2))
+
+    (my/leader-keys
+      ;;"SPC" '(counsel-M-x :wk "Counsel M-x")
+      "SPC" '(execute-extended-command :wk "M-x")
+      "TAB" '(comment-line :wk "Comment lines")
+      "#" '(my-indirect-buffer :wk "note-bar")
+      "." '(find-file :wk "Find file")
+      "," '(flyspell-correct-word-before-point :wk "Correct!")
+      ;;"a" '((lambda()(interactive)(org-agenda nil "n")) :wk "org-agenda")
+      "c" '(count-words :wk "Count words")
+      "u" '(universal-argument :wk "Universal argument")
+      ;;"y" '(yank-to-clipboard :wk "Yank to clipboard")
+      "1" '(eyebrowse-switch-to-window-config-1 :wk "Screen 1")
+      "2" '(eyebrowse-switch-to-window-config-2 :wk "Screen 2")
+      "3" '(eyebrowse-switch-to-window-config-3 :wk "Screen 3")
+      "4" '(eyebrowse-switch-to-window-config-4 :wk "Screen 4")
+
+      "<left>" '(windmove-left :wk "Windmove Left")
+      "<right>" '(windmove-right :wk "Windmove Right")
+      "<up>" '(windmove-up :wk "Windmove Up")
+      "<down>" '(windmove-down :wk "Windmove Down")
+
+      "<" '((lambda()(interactive)(uka/check (uka/d6) (uka/d6))) :wk "roll fair")
+      )
+
+    (my/leader-keys
+      "-" '(:ignore t :wk "System")
+      "- -" '(uka/dsync :wk "Sync to github.com")
+      "- v" '(emacs-version :wk "Emacs version")
+      "- e" '(my-escesc :wk "evil esc-esc-mode on")
+      "- s" '(shell :wk "Shell")
+      )
+
+  (my/leader-keys
+    "d" '(:ignore t :wk "Denote")    
+    ;; "d d" '((lambda () (interactive) (find-file (my/localfile "org/denotes"))) :wk "list notes")
+    "d n" '(denote :wk "new note")
+    "d r" '(denote-rename-file :wk "rename")
+    "d l" '(denote-link :wk "link")
+    "d c" '(denote-link-after-creating :wk "create and link")
+    "d b" '(denote-backlinks :wk "backlinks")
+    "d d" '(denote-dired :wk "dired")
+    "d g" '(denote-grep :wk "grep")
+    )
+
+    (my/leader-keys
+      "f" '(:ignore t :wk "Files")    
+      "f b" '((lambda () (interactive)
+                (find-file (car org-cite-global-bibliography)))
+              :wk "Open references.bib")
+      "f c" '((lambda () (interactive)
+                (find-file my/initfile))
+              :wk "Open emacsinit.org")
+      ;; "f d" '(find-grep-dired :wk "Search for string in files in DIR")
+      ;; "f g" '(counsel-grep-or-swiper :wk "Search for string current file")
+      ;; "f j" '(counsel-file-jump :wk "Jump to a file below current directory")
+      ;; "f l" '(counsel-locate :wk "Locate a file")
+      "f r" '(recentf-open-files :wk "Find recent files")
+      ;;"f r" '(counsel-recentf :wk "Find recent files")
+      )
+
+    (my/leader-keys
+      "j" '(:ignore t :wk "Journal")
+      "j a" '(org-agenda :wk "Agenda")
+      "j c" '(org-capture :wk "Capture")
+      "j s" '(org-store-link :wk "Store link")
+      "j t" '(org-inlinetask-insert-task :wk "Inline task")
+      "j l" '(org-todo-list :wk "Todo list")
+      "j j" '(org-journal-new-entry :wk "Neuer Eintrag")
+      "j h" '((lambda () (interactive) (org-journal-new-entry 1)) :wk "Heute")
+      )
+
+    (my/leader-keys
+      "l" '(:ignore t :wk "LLM")
+      "l l" '(gptel-send :wk "send to OpenAI"))
+
+    ;; (my/leader-keys
+      ;; "o" '(:ignore t :wk "org-mode")
+      ;; "o n" '(org-noter :wk "org-noter")
+      ;; "o s" '(org-noter-sync-current-note :wk "sync org-note")
+      ;; "o b" '((lambda () (interactive)
+                ;; (find-file "~/org/bibliography.org")) 
+              ;; :wk "Open Bibliography.org")
+      ;; "o e" '(org-encrypt-entry :wk "encrypt entry")
+      ;; "o d" '(org-decrypt-entry :wk "decrypt entry"))
+
+  (global-set-key (kbd "C-c l") 'org-store-link)
+  (global-set-key (kbd "C-c a") 'org-agenda)
+  (global-set-key (kbd "C-c c") 'org-capture)
+
+    (my/leader-keys
+      "r" '(:ignore t :wk "References")
+      "r +" '(bibtex-entry :wk "Bibtex - neu")
+      "r c" '(bibtex-clean-entry :wk "Bibtex - clean")
+      "r f" '(bibtex-reformat :wk "Bibtex - reformat")
+      "r r" '(org-cite-insert :wk "cite")
+      )
+
+    (my/leader-keys
+      "s" '(:ignore t :wk "Schreiben")
+      "s i" '(scriv :wk "Schreib-Mode")
+      "s r" '(flyspell-buffer :wk "Rechtschreibprüfung")
+      "s c" '((lambda () (interactive) (flyspell-mode -1)) :wk "clear highlights")
+      )
+
+    (my/leader-keys
+      "t" '(:ignore t :wk "Toggle")
+      ;; "t t" '(org-side-tree :wk "org-side-tree")
+      ;; "t n" '(org-side-tree-toggle-narrow-on-jump :wk "o-s-t: narrow")
+      ;;"t d" '(darkroom-mode :wk "Darkroom-Mode")
+      "t t" '(my/org-narrow-toggle :wk "toggle subTree narrow")
+      )
+
+    (my/leader-keys
+      "w" '(:ignore t :wk "www")
+      "w w" '((lambda () (interactive) (my-qweb "w")) :wk "Wikipedia")
+      "w d" '((lambda () (interactive) (my-qweb "d")) :wk "DuckDuckGo")
+      "w s" '((lambda () (interactive) (my-qweb "s")) :wk "Plato@Stanford")
+      "w f" '(elfeed :wk "elfeed")
+      )
+  (global-set-key (kbd "M-o") 'other-window)
+
+  ;; (global-set-key (kbd "\C-t") 'eshell-toggle)
+  ;;(define-key evil-normal-state-map (kbd "C-t") 'eshell-toggle)
+  ;;(define-key evil-insert-state-map (kbd "C-t") 'eshell-toggle)
+#+end_src
+
+#+RESULTS:
+: eshell-toggle
+
+#+begin_src emacs-lisp
+  (define-prefix-command 'my-map)
+  (global-set-key (kbd "\C-q") 'my-map)
+  (define-key my-map (kbd "\C-q") 'quoted-insert)
+  (define-key my-map (kbd "SPC") 'uka/loner)
+#+end_src
+
+* COMMENT NRU
+** COMMENT Keybindings
+*** Schicht 1: CUA + OS-Modifier
+#+begin_src emacs-lisp
+    (cua-mode 1)
+
+    ;; macOS: Cmd → Super, Option → Meta
+    (when (eq system-type 'darwin)
+      (progn
+        (menu-bar-mode 1)
+        (setq mac-command-modifier 'super
+              mac-option-modifier 'meta
+              default-input-method "MacOSX")
+        (when (display-graphic-p)
+          (pixel-scroll-precision-mode 1))
+        (when (window-system)
+          (set-face-attribute 'default nil :family "Menlo" :height 180 :weight 'normal)
+          (set-face-attribute 'fixed-pitch nil :family "Menlo" :height 180 :weight 'normal)
+          (set-face-attribute 'variable-pitch nil :family "Helvetica" :height 200 :weight 'normal)
+          ;; (setq line-spacing 0.05)
+          )
+        (progn
+          (global-set-key "\M-l" '(lambda () (interactive) (insert "@")))
+          (global-set-key "\M-5" '(lambda () (interactive) (insert "[")))
+          (global-set-key "\M-6" '(lambda () (interactive) (insert "]")))
+          (global-set-key "\M-7" '(lambda () (interactive) (insert "|")))
+          (global-set-key "\M-/" '(lambda () (interactive) (insert "\\")))
+          (global-set-key "\M-8" '(lambda () (interactive) (insert "{")))
+          (global-set-key "\M-9" '(lambda () (interactive) (insert "}")))
+          (global-set-key "\M-n" '(lambda () (interactive) (insert "~")))
+          ;; (global-set-key (kbd "<f7>") '(lambda () (interactive) (insert "\\"))) ;; für ipad+magickbd
+          )))
+
+      ;; Leader-Key wird in Schicht 2/3 per my/leader-key() plattformabhängig gesetzt.
+
+      ;; CUA-kompatible Bindings: macOS → Super (Cmd), Linux/Windows → Ctrl
+      (let ((mod (if (eq system-type 'darwin) "s" "C")))
+        (global-set-key (kbd (format "%s-z" mod)) 'undo)
+        (global-set-key (kbd (format "%s-s" mod)) 'save-buffer)
+        (global-set-key (kbd (format "%s-a" mod)) 'mark-whole-buffer)
+        (global-set-key (kbd (format "%s-f" mod)) 'isearch-forward)
+        ;; (global-set-key (kbd (format "%s-w" mod)) 'delete-frame)
+        (if (display-graphic-p) ;; gui
+  	  (global-set-key (kbd (format "%s-q" mod)) 'save-buffers-kill-terminal))
+        )
+#+end_src
+
+*** Schicht 2 + 3: Navigation + Leader (general.el)
+#+begin_src emacs-lisp
+  (defun my/dsync ()
+    (interactive)
+    (shell-command "cd ~/em-writer && emacs/bin/dsync"))
+
+  (use-package general
+    ;; :ensure t
+    :demand t
+    :config
+
+    ;; --- Plattform-Abstraktion ---
+    ;; macOS GUI:    CapsLock via Karabiner → F18 → <f18>
+    ;; Linux GUI:    CapsLock via keyd → F18, aber X11 liefert XF86Launch9 → <XF86Launch9>
+    ;; Terminal:     C-q als Prefix
+    (defun my/leader-key ()
+      "Ermittle die Leader-Taste plattformabhängig."
+      (cond ((not (display-graphic-p)) "C-q")
+            ((eq system-type 'darwin)  "<f18>")
+            (t                          "<XF86Launch9>")))
+
+    (defun my/nav-key (key)
+      "Erzeuge plattformabhängigen Nav-Key: <leader> <key>.
+       Gibt einen String zurück (nicht kbd-Vektor), damit general.el die Prefix-Maps korrekt anlegt."
+      (format "%s %s" (my/leader-key) key))
+
+    ;; --- Schicht 2: Navigations-Layer (globale Keymap, kein :override) ---
+    (if (not (display-graphic-p)) ;; terminal
+        (progn 
+  	(global-unset-key (kbd "C-q"))
+  	(define-key key-translation-map (kbd "C-q") nil)
+      ))
+    
+    (general-define-key
+     (my/nav-key ".") '(find-file :wk "find-file")
+     (my/nav-key "g") 'goto-line
+     (my/nav-key "1") '(eyebrowse-switch-to-window-config-1 :wk "Screen 1")
+     (my/nav-key "2") '(eyebrowse-switch-to-window-config-2 :wk "Screen 2")
+     (my/nav-key "3") '(eyebrowse-switch-to-window-config-3 :wk "Screen 3")
+     (my/nav-key "4") '(eyebrowse-switch-to-window-config-4 :wk "Screen 4")
+     (my/nav-key "<left>") '(windmove-left :wk "Windmove Left")
+     (my/nav-key "<right>") '(windmove-right :wk "Windmove Right")
+     (my/nav-key "<up>") '(windmove-up :wk "Windmove Up")
+     (my/nav-key "<down>") '(windmove-down :wk "Windmove Down")
+     (my/nav-key ",") '(ispell-word :wk "Korrekturvorschlag")
+     )
+
+    ;; --- Terminal: C-q C-q → quoted-insert (Originalfunktion bewahren) ---
+    ;;(if (display-graphic-p)
+    ;;  (general-define-key
+    ;;   "C-q C-q" 'quoted-insert))
+
+    ;; --- Schicht 3: Leader-Key-System (direkt unter Leader, kein SPC nötig) ---
+    (general-create-definer my/leader
+      :prefix (my/leader-key))
+
+    ;; System
+    (my/leader
+      "!"   '(:ignore t :wk "system")
+      "! s" '(my/dsync :wk "bin/dsync")
+      )
+
+    ;; Buffer
+    (my/leader
+      "b"   '(:ignore t :wk "buffer")
+      "b b" '(switch-to-buffer :wk "switch")
+      "b k" '(kill-buffer :wk "kill")
+      "b l" '(ibuffer :wk "list"))
+
+    ;; Buffer
+    (my/leader
+      "f"   '(:ignore t :wk "file")
+      "f ." '(find-file :wk "find-file")
+      "f r" '(recentf-open-files :wk "Find recent files")
+      "f c" '((lambda () (interactive)
+                (find-file my/initfile))
+              :wk "Open init.org")
+   )
+
+    ;; Window
+    (my/leader
+      "w"   '(:ignore t :wk "window")
+      "w v" '(split-window-right :wk "vsplit")
+      "w s" '(split-window-below :wk "hsplit")
+      "w d" '(delete-window :wk "delete")
+      "w o" '(other-window :wk "other")
+      "w =" '(balance-windows :wk "balance"))
+
+    ;; Search
+    (my/leader
+      "s"   '(:ignore t :wk "search")
+      "s s" '(consult-line :wk "line")
+      "s g" '(consult-ripgrep :wk "ripgrep")
+    ;;  "s f" '(find-file :wk "file")
+      "s r" '(query-replace :wk "replace"))
+
+    ;; Project
+    (my/leader
+      "p"   '(:ignore t :wk "project")
+      "p f" '(project-find-file :wk "find file")
+      "p g" '(project-find-regexp :wk "grep")
+      "p d" '(project-dired :wk "dired"))
+
+    ;; Mode-spezifisch: Org-Mode
+    (my/leader
+      :keymaps 'org-mode-map
+      "m"   '(:ignore t :wk "org")
+      "m t" '(org-todo :wk "todo")
+      "m s" '(org-schedule :wk "schedule")
+      "m e" '(org-export-dispatch :wk "export")
+      "m n" '(hl-todo-next :wk "nächste Notiz")
+      "m N" '(hl-todo-previous :wk "vorherige Notiz")
+      "m l" '(hl-todo-occur :wk "alle Notizen")))
+#+end_src
+
+#+RESULTS:
+: #s(hash-table data (:use-package (27092 65242 364506 408000) :init (27092 65242 364492 219000) :config (27092 65242 364081 741000) :config-secs (0 0 7895 476000) :init-secs (0 0 8755 722000) :use-package-secs (0 0 8866 170000)))
+
+** COMMENT Schreibumgebung
+** Font-Defaults (plattformübergreifend)
+#+begin_src emacs-lisp
+  ;; Linux/Windows font defaults (macOS ist in Schicht 1 konfiguriert)
+  (unless (eq system-type 'darwin)
+    (when (display-graphic-p)
+      (set-face-attribute 'default nil
+                          :family (cond ((find-font (font-spec :name "JetBrains Mono")) "JetBrains Mono")
+                                        ((find-font (font-spec :name "Fira Code")) "Fira Code")
+                                        ((find-font (font-spec :name "DejaVu Sans Mono")) "DejaVu Sans Mono")
+                                        (t "Monospace"))
+                          :height 130)
+      (set-face-attribute 'fixed-pitch nil :family (face-attribute 'default :family))
+      (set-face-attribute 'variable-pitch nil
+                          :family (cond ((find-font (font-spec :name "Source Sans 3")) "Source Sans 3")
+                                        ((find-font (font-spec :name "Source Serif 4")) "Source Serif 4")
+                                        ((find-font (font-spec :name "Atkinson Hyperlegible")) "Atkinson Hyperlegible")
+                                        ((find-font (font-spec :name "Noto Sans")) "Noto Sans")
+                                        ((find-font (font-spec :name "DejaVu Sans")) "DejaVu Sans")
+                                        (t "Sans Serif"))
+                          :height 1.15)))
+#+end_src
+
+#+RESULTS:
+
+** olivetti (zentrierter Text)
+#+begin_src emacs-lisp
+  (use-package olivetti
+    :ensure t
+    :diminish
+    :custom
+    (olivetti-body-width 65)
+    (olivetti-minimum-body-width 55)
+    (olivetti-recall-visual-line-mode-entry-state t)
+    )
+#+end_src
+
+#+RESULTS:
+: #s(hash-table data (:use-package (27086 34089 490302 373000) :init (27086 34089 490253 811000) :config (27086 34089 489155 238000) :config-secs (0 0 41 523000) :init-secs (0 0 2479 455000) :use-package-secs (0 0 2836 471000)))
+
+** COMMENT centered-cursor-mode (Schreibmaschinen-Scrollen)
+#+begin_src emacs-lisp
+  (use-package centered-cursor-mode
+    :ensure t
+    :diminish centered-cursor-mode
+    :custom
+    ;; Trackpad-Scroll-Befehle ignorieren: sonst kämpft recenter nach
+    ;; jedem Scroll-Schritt gegen das Trackpad (macOS Catalina + Emacs 30).
+    (ccm-ignored-commands '(mouse-drag-region
+                             mouse-set-point
+                             widget-button-click
+                             scroll-bar-toolkit-scroll
+                             mwheel-scroll
+                             pixel-scroll-precision)))
+#+end_src
+
+** mixed-pitch (Proportionalschrift für Prosa)
+#+begin_src emacs-lisp
+  (use-package mixed-pitch
+    :ensure t
+    :diminish
+    :custom
+    (mixed-pitch-set-height nil))
+#+end_src
+
+** focus (Fokus auf aktuellen Absatz)
+#+begin_src emacs-lisp
+  (use-package focus
+    :ensure t)
+#+end_src
+
+** Theme-Wechsel (hell/dunkel)
+#+begin_src emacs-lisp
+  (defun my/toggle-theme ()
+    "Wechselt zwischen modus-operandi (hell) und modus-vivendi (dunkel)."
+    (interactive)
+    (if (eq (car custom-enabled-themes) 'modus-operandi)
+        (progn (disable-theme 'modus-operandi)
+               (load-theme 'modus-vivendi t))
+      (progn (disable-theme 'modus-vivendi)
+             (load-theme 'modus-operandi t))))
+#+end_src
+
+** writer-mode (kombinierter Schreibmodus)
+#+begin_src emacs-lisp
+  (defvar my/writer-default-line-spacing 0.15
+    "Line-spacing für den Schreibmodus.")
+
+  (define-minor-mode my/writer-mode
+    "Kombinierter Schreibmodus: olivetti + centered-cursor + mixed-pitch + line-spacing."
+    :lighter " Writer"
+    :global nil
+    (if my/writer-mode
+        (progn
+          (olivetti-mode 1)
+          ;;(centered-cursor-mode 1)
+          (mixed-pitch-mode 1)
+          (org-bullets-mode 1)
+          (hl-todo-mode 1)
+          (flyspell-mode 1)
+          (setq-local line-spacing my/writer-default-line-spacing)
+          (when (derived-mode-p 'org-mode)
+            (setq-local org-hide-emphasis-markers t)
+            (font-lock-flush)))
+      (progn
+        (olivetti-mode -1)
+        ;(centered-cursor-mode -1)
+        (mixed-pitch-mode -1)
+        (org-bullets-mode -1)
+        (hl-todo-mode -1)
+        (flyspell-mode -1)
+        (kill-local-variable 'line-spacing)
+        (when (derived-mode-p 'org-mode)
+          (setq-local org-hide-emphasis-markers nil)
+          (font-lock-flush)))))
+
+  (defun my/toggle-distraction-free ()
+    "Ablenkungsfreier Modus: Vollbild + writer-mode + Modeline ausblenden."
+    (interactive)
+    (if my/writer-mode
+        (progn
+          (my/writer-mode -1)
+          (doom-modeline-mode 1)
+          (when (frame-parameter nil 'fullscreen)
+            (toggle-frame-fullscreen)))
+      (progn
+        (unless (frame-parameter nil 'fullscreen)
+          (toggle-frame-fullscreen))
+        (my/writer-mode 1)
+        (doom-modeline-mode -1))))
+
+  (defun my/cycle-line-spacing ()
+    "Zyklisch zwischen drei Zeilenabständen wechseln: 0 / 0.15 / 0.3."
+    (interactive)
+    (let* ((current (or line-spacing 0))
+           (next (cond ((< current 0.05) 0.15)
+                       ((< current 0.2) 0.3)
+                       (t 0))))
+      (setq-local line-spacing next)
+      (message "Line-spacing: %s" next)))
+#+end_src
+
+#+RESULTS:
+: my/cycle-line-spacing
+
+** Fortschritt & Statistik
+#+begin_src emacs-lisp
+  (defvar my/wgoal-target nil
+    "Aktuelles Sitzungsziel in Wörtern, nil = inaktiv.")
+  (defvar my/wgoal-start-wc 0
+    "Wortanzahl beim Setzen des Ziels.")
+
+  (defun my/wgoal--current-wc ()
+    (save-restriction (widen)
+                      (count-words (point-min) (point-max))))
+
+  (defun my/wgoal--bar (done total width)
+    (let* ((pct    (min 1.0 (/ (float done) total)))
+           (filled (round (* pct width)))
+           (empty  (- width filled)))
+      (format "[%s%s] %d/%d"
+              (make-string filled ?▒)
+              (make-string empty  ?░)
+              done total)))
+
+  (defun my/wgoal-update ()
+    "Modeline-Fortschritt aktualisieren (after-save-hook)."
+    (when my/wgoal-target
+      (let* ((done (max 0 (- (my/wgoal--current-wc) my/wgoal-start-wc)))
+             (bar  (my/wgoal--bar done my/wgoal-target 12)))
+        (setq global-mode-string
+              (list (if (>= done my/wgoal-target)
+                        (format " ✓ Ziel! %s" bar)
+                      (format " %s" bar))))
+        (force-mode-line-update t))))
+
+  (defvar my/wgoal--timer nil)
+
+  (defun my/wgoal-set (n)
+    "Sitzungsziel auf N Wörter setzen."
+    (interactive "nSchreibziel (Wörter): ")
+    (setq my/wgoal-target   n
+          my/wgoal-start-wc (my/wgoal--current-wc))
+    (when my/wgoal--timer (cancel-timer my/wgoal--timer))
+    (setq my/wgoal--timer (run-with-idle-timer 3 t #'my/wgoal-update))
+    (my/wgoal-update)
+    (message "Ziel: %d Wörter. Los!" n))
+
+  (defun my/wgoal-clear ()
+    "Sitzungsziel löschen."
+    (interactive)
+    (when my/wgoal--timer (cancel-timer my/wgoal--timer) (setq my/wgoal--timer nil))
+    (setq my/wgoal-target    nil
+          global-mode-string nil)
+    (force-mode-line-update t)
+    (message "Schreibziel gelöscht."))
+#+end_src
+
+#+RESULTS:
+: my/wgoal-clear
+
+** Rechtschreibprüfung (Flyspell + Hunspell)
+#+begin_src emacs-lisp
+  ;; --- Hunspell als Backend ---
+  (setq ispell-program-name (or (executable-find "hunspell") "/opt/homebrew/bin/hunspell"))
+  (setq ispell-local-dictionary "de_DE")
+  (setq ispell-local-dictionary-alist
+        '(("de_DE" "[[:alpha:]]" "[^[:alpha:]]" "[']" t ("-d" "de_DE") nil utf-8)
+          ("en_US" "[[:alpha:]]" "[^[:alpha:]]" "[']" t ("-d" "en_US") nil utf-8)))
+  (setq ispell-hunspell-dictionary-alist ispell-local-dictionary-alist)
+
+  ;; Umschalten zwischen Deutsch und Englisch
+  (defun my/spell-de ()
+    "Rechtschreibprüfung auf Deutsch umschalten (Flyspell + LanguageTool)."
+    (interactive)
+    (ispell-change-dictionary "de_DE")
+    (when flyspell-mode (flyspell-buffer))
+    (setq-local flymake-languagetool-language "de-DE")
+    (when (bound-and-true-p flymake-mode) (flymake-start))
+    (message "Sprache: Deutsch"))
+
+  (defun my/spell-en ()
+    "Rechtschreibprüfung auf Englisch umschalten (Flyspell + LanguageTool)."
+    (interactive)
+    (ispell-change-dictionary "en_US")
+    (when flyspell-mode (flyspell-buffer))
+    (setq-local flymake-languagetool-language "en-US")
+    (when (bound-and-true-p flymake-mode) (flymake-start))
+    (message "Sprache: English"))
+
+  ;; Korrekturvorschläge: Emacs-eigenes flyspell-popup (ispell-word)
+  ;; flyspell-correct entfernt — inkompatibel mit aktueller Emacs-Version.
+#+end_src
+
+** Grammatikprüfung (LanguageTool)
+LanguageTool ergänzt Flyspell um Grammatik, Zeichensetzung und Stilregeln.
+Läuft als lokaler HTTP-Server (Java-JAR), Emacs nutzt =flymake-languagetool=
+als Flymake-Backend. Prüfung on-demand, kein Live-Check.
+
+Server-Lifecycle, On-Demand-Check und Diagnose-Helfer sind ins eigene Paket
+=./elisp/em-grammar/= ausgelagert. Dieser Abschnitt konfiguriert nur das
+Flymake-Backend und lädt =em-grammar=.
+
+Voraussetzung (einmalig):
+#+begin_example
+macOS:         brew install languagetool
+Debian/Ubuntu: sudo apt install languagetool
+Windows:       Java JRE + LanguageTool-ZIP manuell; $LANGUAGETOOL_JAR setzen
+#+end_example
+
+Rechtschreibung bleibt bei Flyspell/Hunspell — LanguageTool prüft hier nur
+Grammatik/Stil (=flymake-languagetool-check-spelling nil=), keine
+Doppelmarkierungen.
+
+#+begin_src emacs-lisp
+  (use-package flymake-languagetool
+    :ensure t
+    :commands (flymake-languagetool-load flymake-languagetool-maybe-load)
+    :custom
+    ;; Port MUSS String sein (defcustom-Typ). URL bleibt nil, damit das
+    ;; Package intern "http://localhost:PORT" zusammenbaut — setzt man hier
+    ;; "http://localhost", wird der Port NICHT angehängt und alle Requests
+    ;; laufen ins Leere.
+    (flymake-languagetool-server-port "8081")
+    (flymake-languagetool-url nil)
+    (flymake-languagetool-language "de-DE")
+    (flymake-languagetool-check-spelling nil)
+    ;; TYPOS: Rechtschreibung macht Flyspell.
+    ;; TYPOGRAPHY: Bindestriche, Anführungszeichen, doppelte Leerzeichen —
+    ;;   im Manuskript meist Rauschen, beim Satz ohnehin vom Verlag erledigt.
+    (flymake-languagetool-disabled-categories '("TYPOS" "TYPOGRAPHY")))
+
+  (let ((em-grammar-dir (expand-file-name
+                         "elisp/em-grammar"
+                         (file-name-directory my/initfile))))
+    (when (file-directory-p em-grammar-dir)
+      (add-to-list 'load-path em-grammar-dir)
+      (use-package em-grammar
+        :ensure nil
+        :commands (em-grammar-check
+                   em-grammar-off
+                   em-grammar-server-start
+                   em-grammar-server-stop
+                   em-grammar-server-restart
+                   em-grammar-debug
+                   em-grammar-trace))))
+
+#+end_src
+
+** Stilanalyse (Eschbach 10-Punkte-Text-ÜV)
+Eigenes Paket unter =./elisp/em-stilanalyse/=. Markiert stilistische Schwachstellen
+(Füllwörter, Passiv, lange Sätze, Dialog-Tags, Wortwiederholungen usw.) via
+Overlays und erzeugt einen Report-Buffer mit Counts und Sprungmarken.
+
+Projekt-relatives Laden analog zum =my/localfile=-Muster weiter oben: der
+=load-path= wird relativ zu =my/initfile= gesetzt, damit das Paket portabel
+unterhalb des Projektverzeichnisses lebt.
+
+#+begin_src emacs-lisp
+  (let ((em-stil-dir (expand-file-name
+                      "elisp/em-stilanalyse"
+                      (file-name-directory my/initfile))))
+    (when (file-directory-p em-stil-dir)
+      (add-to-list 'load-path em-stil-dir)
+      (use-package em-stilanalyse
+        :ensure nil
+        :commands (em-stilanalyse-mode
+                   em-stilanalyse-scan
+                   em-stilanalyse-clear
+                   em-stilanalyse-refresh
+                   em-stilanalyse-report
+                   em-stilanalyse-toggle-category
+                   em-stilanalyse-focus-category
+                   em-stilanalyse-all-categories))))
+#+end_src
+
+** KI-Assistent (gptel + em-ki)
+LLM-Anbindung für Brainstorming, Zusammenfassungen, Dialog-Checks und
+Stilvorschläge. Unterstützt Anthropic und OpenRouter als Backends.
+
+API-Keys in =~/.authinfo.gpg= (oder =~/.authinfo=):
+#+begin_example
+machine api.anthropic.com login apikey password sk-ant-...
+machine openrouter.ai login apikey password sk-or-...
+#+end_example
+
+#+begin_src emacs-lisp
+  (use-package gptel
+    :ensure t
+    :defer t)
+
+  (let ((em-ki-dir (expand-file-name
+                    "elisp/em-ki"
+                    (file-name-directory my/initfile))))
+    (when (file-directory-p em-ki-dir)
+      (add-to-list 'load-path em-ki-dir)
+      (use-package em-ki
+        :ensure nil
+        :custom
+        (em-ki-default-backend 'openrouter)
+        (em-ki-openrouter-models '(anthropic/claude-sonnet-4.6
+                                   anthropic/claude-opus-4.6
+                                   google/gemini-3.1-pro-preview))
+        (em-ki-anthropic-models  '(claude-sonnet-4-20250514
+                                   claude-opus-4-20250514))
+        :commands (em-ki-brainstorm
+                   em-ki-summarize
+                   em-ki-lektor
+                   em-ki-dialog-check
+                   em-ki-style-suggest
+                   em-ki-switch-backend
+                   em-ki-switch-model
+                   em-ki-chat
+                   em-ki-clear))))
+#+end_src
+
+** Snapshots / Versionen
+#+begin_src emacs-lisp
+  (let ((em-snap-dir (expand-file-name
+                      "elisp/em-snapshot"
+                      (file-name-directory my/initfile))))
+    (when (file-directory-p em-snap-dir)
+      (add-to-list 'load-path em-snap-dir)
+      (use-package em-snapshot
+        :ensure nil
+        :commands (em-snapshot-save
+                   em-snapshot-diff
+                   em-snapshot-list
+                   em-snapshot-restore))))
+
+#+end_src
+#+RESULTS:
+: #s(hash-table data (:use-package (27091 51936 146618 0) :init (27091 51936 146617 0) :init-secs (0 0 11 0) :use-package-secs (0 0 23 0) :config (27091 51936 146611 0) :config-secs (0 0 1 0)))
+
+** Schreibumgebung-Keybindings
+#+begin_src emacs-lisp
+  (my/leader
+    "W"   '(:ignore t :wk "writing")
+    "W W" '(my/writer-mode :wk "writer-mode (combined)")
+    "W d" '(my/toggle-distraction-free :wk "distraction-free")
+    "W o" '(olivetti-mode :wk "olivetti (center)")
+    "W c" '(centered-cursor-mode :wk "centered-cursor")
+    "W p" '(mixed-pitch-mode :wk "mixed-pitch")
+    "W f" '(focus-mode :wk "focus (dim)")
+    "W l" '(my/cycle-line-spacing :wk "line-spacing cycle")
+    "W t" '(my/toggle-theme :wk "theme toggle")
+    "W g" '(my/wgoal-set   :wk "Ziel setzen")
+    "W G" '(my/wgoal-clear :wk "Ziel löschen")
+    "W S" '(flyspell-mode  :wk "spell toggle")
+    "W D" '(my/spell-de    :wk "Sprache: Deutsch")
+    "W E" '(my/spell-en    :wk "Sprache: English")
+    "W a"   '(:ignore t :wk "stilanalyse")
+    "W a a" '(em-stilanalyse-refresh          :wk "scan/refresh")
+    "W a c" '(em-stilanalyse-clear            :wk "clear")
+    "W a r" '(em-stilanalyse-report           :wk "report")
+    "W a t" '(em-stilanalyse-toggle-category  :wk "toggle category")
+    "W a 1" '(em-stilanalyse-focus-category   :wk "fokus: eine Kategorie")
+    "W a 0" '(em-stilanalyse-all-categories   :wk "alle Kategorien")
+    "W a m" '(em-stilanalyse-mode             :wk "mode toggle")
+    "W r"   '(:ignore t :wk "grammatik")
+    "W r r" '(em-grammar-check                :wk "check (on-demand)")
+    "W r x" '(em-grammar-off                  :wk "off (clear)")
+    "W r s" '(em-grammar-server-start         :wk "server start")
+    "W r k" '(em-grammar-server-stop          :wk "server kill")
+    "W r R" '(em-grammar-server-restart       :wk "server restart")
+    "W r d" '(em-grammar-debug                :wk "debug: raw POST")
+    "W r t" '(em-grammar-trace                :wk "trace: filtered+async")
+    "W k"   '(:ignore t :wk "ki-assistent")
+    "W k b" '(em-ki-brainstorm                :wk "brainstorm")
+    "W k s" '(em-ki-summarize                 :wk "zusammenfassen")
+    "W k d" '(em-ki-dialog-check              :wk "dialog-check")
+    "W k v" '(em-ki-style-suggest             :wk "stilvorschläge")
+    "W k k" '(em-ki-switch-backend            :wk "backend wechseln")
+    "W k m" '(em-ki-switch-model              :wk "modell wechseln")
+    "W k c" '(em-ki-chat                      :wk "chat (frei)")
+    "W k x" '(em-ki-clear                     :wk "buffer löschen")
+    "W v"   '(:ignore t :wk "snapshots")
+    "W v s" '(em-snapshot-save                :wk "snapshot speichern")
+    "W v d" '(em-snapshot-diff                :wk "diff mit snapshot")
+    "W v l" '(em-snapshot-list                :wk "snapshot öffnen")
+    "W v r" '(em-snapshot-restore             :wk "wiederherstellen"))
+#+end_src
+
+#+RESULTS:
+
+** COMMENT Scrivener
+#+begin_src emacs-lisp
+  ;; Indirekten Buffer für Subtree mit Heading-Präfix erzeugen (narrowed).
+  (defun my/org-subtree-to-indirect (prefix)
+    "Erzeuge oder hole indirekten Buffer für Subtree mit Heading PREFIX.
+  Gibt den Buffer zurück oder nil wenn kein passendes Heading gefunden."
+    (let* ((base-buf (current-buffer))
+           (buf-name (format "%s::%s" (buffer-name base-buf) prefix)))
+      (save-excursion
+        (save-restriction
+          (widen)
+          (goto-char (point-min))
+          (when (re-search-forward
+                 (concat "^\\*+ " (regexp-quote prefix)) nil t)
+            (beginning-of-line)
+            (let* ((heading-pos (point))
+                   (ibuf (or (get-buffer buf-name)
+                             (make-indirect-buffer base-buf buf-name t))))
+              (with-current-buffer ibuf
+                (widen)
+                (goto-char heading-pos)
+                (org-narrow-to-subtree))
+              ibuf))))))
+
+  ;; Subtree in Side-Window anzeigen — explizites display-buffer, kein Namens-Matching.
+  (defun my/scrivener-toggle (prefix side slot &optional width)
+    "Toggle Side-Window für Subtree mit Heading PREFIX."
+    (if-let* ((ibuf (my/org-subtree-to-indirect prefix))
+              (win  (get-buffer-window ibuf)))
+        (delete-window win)
+      (when-let ((ibuf (my/org-subtree-to-indirect prefix))
+                 (win  (display-buffer ibuf
+                                       `(display-buffer-in-side-window
+                                         (side . ,side)
+                                         (slot . ,slot)
+                                         (window-width . ,(or width 0.25))
+                                         (preserve-size . (t . nil))
+                                         (window-parameters . ((no-delete-other-windows . t)))))))
+        (set-window-point win (with-current-buffer ibuf (point-min)))
+        (set-window-start win (with-current-buffer ibuf (point-min))))))
+
+  (defun my/scrivener-hd    () (interactive) (my/scrivener-toggle "HD" 'top    0))
+  (defun my/scrivener-tr    () (interactive) (my/scrivener-toggle "TR" 'right -1))
+  (defun my/scrivener-br    () (interactive) (my/scrivener-toggle "BR" 'right  1))
+
+  (defun my/scrivener-open-all ()
+    "Alle Scrivener-Sidebars öffnen: HD oben, TR rechts oben, BR rechts unten."
+    (interactive)
+    (my/scrivener-hd)
+    (my/scrivener-tr)
+    (my/scrivener-br))
+
+  (defun my/sidebar ()
+    (interactive)
+    (occur "*+ "))
+
+  (my/leader
+    ">"   '(my/scrivener-open-all :wk "alle Sidebars")
+    "o"   '(:ignore t :wk "org/scrivener")
+    "o t" '(my/sidebar :wk "sidebar (occur)")
+    "o h" '(my/scrivener-hd :wk "HD oben")
+    "o r" '(my/scrivener-tr :wk "TR rechts oben")
+    "o b" '(my/scrivener-br :wk "BR rechts unten"))
+
+#+end_src
+
+** HD Snowflake
+- Snowflake: z.B. Phase II in fünf Sätze
+- TOC auf der linken Seite: M-x occur "*+ "
+
+** TR Charaktere
+
+kjhkjhkjhkjh
+
+** BR Orte
+hier und dort
+** COMMENT selected shortcuts
+#+begin_src emacs-lisp
+  (defun my/nav-key2 (key)
+    (format "%s %s %s" (my/leader-key) (my/leader-key) key))
+
+  (general-define-key
+   (my/nav-key2 "w") '(my/writer-mode :wk "writer-mode (combined)")
+   (my/nav-key2 "s") '(flyspell-mode  :wk "spell toggle")
+   (my/nav-key2 "g") '(my/wgoal-set   :wk "Ziel setzen")
+   (my/nav-key2 "G") '(my/wgoal-clear :wk "Ziel löschen")
+   (my/nav-key2 "f") '(focus-mode :wk "focus (dim)")
+   ;;(my/nav-key2 "c") '(em-stilanalyse-refresh          :wk "scan/refresh")
+   ;;(my/nav-key2 "C") '(em-stilanalyse-clear            :wk "clear")
+   ;;(my/nav-key2 "r") '(em-stilanalyse-report           :wk "report")
+   (my/nav-key2 "k") '(em-ki-lektor :wk "KI-Lektor an")
+   (my/nav-key2 "K") '(em-ki-clear :wk "KI-Lektor aus")
+   (my/nav-key2 "l") '(org-store-link :wk "org-link store")
+   (my/nav-key2 "L") '(org-insert-link :wk "org-link insert")
+   )
+#+end_src
+
+#+RESULTS:
+
+
+** COMMENT html export defaults
+#+begin_src emacs-lisp
+  ;; (require 'htmlize)
+** COMMENT org-bullets
+#+begin_src emacs-lisp
+(use-package org-bullets)
+#+end_src
+
+** COMMENT Überarbeitungs-Marker (hl-todo)
+#+begin_src emacs-lisp
+  (use-package hl-todo
+    :hook (org-mode . hl-todo-mode)
+    :custom
+    (hl-todo-keyword-faces
+     '(("TODO"         . "#cc6600")
+       ("FIXME"        . "#cc3333")
+       ("ÜBERARBEITEN" . "#cc3333")
+       ("LÜCKE"        . "#9966cc")
+       ("PRÜFEN"       . "#3366cc")
+       ("NOTE"         . "#669933")
+       ("IDEE"         . "#669933"))))
+
+  (defun my/org-remove-review-markers (text _backend _info)
+    "Entfernt Überarbeitungs-Marker beim Org-Export aus dem Fließtext."
+    (replace-regexp-in-string
+     "\\b\\(TODO\\|FIXME\\|ÜBERARBEITEN\\|LÜCKE\\|PRÜFEN\\|NOTE\\|IDEE\\)\\b:?[^\n]*"
+     "" text))
+
+  (with-eval-after-load 'ox
+    (add-to-list 'org-export-filter-paragraph-functions
+                 #'my/org-remove-review-markers))
+#+end_src
+
+#+RESULTS:
+| my/org-remove-review-markers |

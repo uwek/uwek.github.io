@@ -1,0 +1,42 @@
+#+TITLE: Mein erster Post aus Org-Mode
+#+DATE: 2026-08-18 21:00:00 +0200
+#+CATEGORIES: jekyll org
+
+Dieser Beitrag wurde komplett in Org-Mode geschrieben und über
+=make org= nach Markdown exportiert.
+
+#+BEGIN_EXPORT html
+<!--more-->
+#+END_EXPORT
+
+* Textformatierung
+
+Org kennt die üblichen Auszeichnungen: *fett*, /kursiv/, =code= und
+sogar +durchgestrichen+.
+
+* Liste
+
+- Erster Punkt
+- Zweiter Punkt
+  - Verschachtelt
+- Dritter Punkt
+
+* Tabelle
+
+| Werkzeug | Aufgabe               |
+|----------+------------------------|
+| Jekyll   | Seiten generieren      |
+| Org-Mode | Inhalte schreiben      |
+| Emacs    | Export ausführen       |
+
+* Code-Beispiel
+
+#+BEGIN_SRC ruby
+def greet(name)
+  puts "Hallo, #{name}!"
+end
+#+END_SRC
+
+* Link
+
+Mehr dazu in der [[https://orgmode.org/][Org-Mode-Dokumentation]].

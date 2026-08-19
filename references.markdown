@@ -1,6 +1,6 @@
 ---
 layout: page
-title: Literatur
+title: Bücherschrank
 permalink: /references/
 ---
 
